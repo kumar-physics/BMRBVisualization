@@ -1,7 +1,8 @@
 import pynmrstar
 import plotly
 from __builtin__ import staticmethod
-
+import requests
+import grp
 
 
 class BMRBVisualization(object):
@@ -122,13 +123,36 @@ class BMRBVisualization(object):
         fig = plotly.graph_objs.Figure(data=data,layout = layout) 
         plotly.offline.plot(fig,filename='test')
                     
-                
+    def histogram(self,atom):
+        link = 'http://webapi.bmrb.wisc.edu/v2/search/chemical_shifts?atom_id={}'.format(atom)
+        x=requests.get(link,headers = {"Application":"BMRB-Plotly"})
+        dat= x.json()['data']
+        col = x.json()['columns']
+        rid = col.index('Atom_chem_shift.Comp_ID')
+        csid = col.index('Atom_chem_shift.Val')
+        csdict={}
+        for i in dat:
+           
+            if i[rid] not in csdict.keys(): csdict[i[rid]]=[]
+            csdict[i[rid]].append(i[csid])
+            
+        hist_data = []
+        group_lables = []
+        #print csdict
+        for k in csdict.keys():
+            if len(csdict[k])>500:
+                hist_data.append(csdict[k])
+                group_lables.append(k)
+                print k,len(csdict[k])
+        fig = plotly.tools.FigureFactory.create_distplot(hist_data,group_lables,bin_size=0.5)
+        plotly.offline.plot(fig,filename='test2')
     
 if __name__ == "__main__":
     p = BMRBVisualization()
-    x=p.readBMRBentry(15007)
-    z=p.getCSdata(x[1])[0]
-    p.plot(z)
+    p.histogram('CB')
+    #x=p.readBMRBentry(15007)
+    #z=p.getCSdata(x[1])[0]
+    #p.plot(z)
     
     
     
