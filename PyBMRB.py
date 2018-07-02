@@ -120,6 +120,12 @@ class PyBMRB(object):
 
         return outdata
     def plotn15_hsqc(self, entryids,colorby= 'res'):
+        if type(entryids) is list:
+            outfilename = 'n15hsqc.html'
+            title = 'N15-HSQC'
+        else:
+            outfilename = '{}.html'.format(entryids)
+            title = 'Simulated N15-HSQC peak positions of BMRB entry {}'.format(entryids)
         csdata = self.getEntry(entryids)
         hsqcdata = self.n15_hsqc(csdata)
         if colorby == 'entry':
@@ -152,9 +158,10 @@ class PyBMRB(object):
             yaxis=dict(autorange='reversed',
                        title='N (ppm)'),
             showlegend=True,
-            hovermode='closest')
+            hovermode='closest',
+        title = title)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        plotly.offline.plot(fig, filename='hsqc.html', auto_open=True)
+        plotly.offline.plot(fig, filename=outfilename, auto_open=True)
 
 
 
@@ -163,3 +170,4 @@ class PyBMRB(object):
 
 if __name__ == "__main__":
     p = PyBMRB()
+    p.plotn15_hsqc(sys.argv[1])
