@@ -122,7 +122,7 @@ class PyBMRB(object):
     def plotn15_hsqc(self, entryids,colorby= 'res'):
         if type(entryids) is list:
             outfilename = 'n15hsqc.html'
-            title = 'N15-HSQC'
+            title = 'Simulated N15-HSQC peak positions'
         else:
             outfilename = '{}.html'.format(entryids)
             title = 'Simulated N15-HSQC peak positions of BMRB entry {}'.format(entryids)
