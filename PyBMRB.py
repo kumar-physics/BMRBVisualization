@@ -119,7 +119,7 @@ class PyBMRB(object):
                                 outdata[4][outdata[0].index(atomid)] = (csdata[3][i])
 
         return outdata
-    def plotn15_hsqc(self, entryids,colorby= 'res'):
+    def plotn15_hsqc(self, entryids,colorby= 'res',groupbyres = False):
         if type(entryids) is list:
             outfilename = 'n15hsqc.html'
             title = 'Simulated N15-HSQC peak positions'
@@ -144,6 +144,20 @@ class PyBMRB(object):
                     data_sets[gid][0].append(hsqcdata[1][i])
                     data_sets[gid][1].append(hsqcdata[2][i])
                     data_sets[gid][2].append(hsqcdata[0][i])
+
+        if groupbyres:
+            id=1
+            groups2 = set(["-".join(k.split("-")[1:4]) for k in hsqcdata[0]])
+            data_sets2={}
+            for gid in groups2:
+                data_sets2[gid] = [[], [], []]
+                for i in range(len(hsqcdata[0])):
+                    if "-".join(hsqcdata[0][i].split("-")[1:4]) == gid:
+                        data_sets2[gid][0].append(hsqcdata[1][i])
+                        data_sets2[gid][1].append(hsqcdata[2][i])
+                        data_sets2[gid][2].append(hsqcdata[0][i])
+
+
         data = []
         for k in data_sets.keys():
             data.append(plotly.graph_objs.Scatter(x=data_sets[k][0],
@@ -152,6 +166,16 @@ class PyBMRB(object):
                                           mode='markers',
                                           name=k)
                                           )
+        if groupbyres:
+            for k in data_sets2.keys():
+                data.append(plotly.graph_objs.Scatter(x=data_sets2[k][0],
+                                                      y=data_sets2[k][1],
+                                                      text=data_sets2[k][2],
+                                                      mode='lines',
+                                                      name=k,
+                                                      showlegend = False)
+                            )
+
         layout = plotly.graph_objs.Layout(
             xaxis=dict(autorange='reversed',
                        title='H (ppm)'),
