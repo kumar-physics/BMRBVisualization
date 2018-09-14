@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="002de448-ac5f-411e-91f5-a04006f61c2c" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PyBMRB.py" beforeDir="false" afterPath="$PROJECT_DIR$/PyBMRB.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/hsqc.html" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -16,8 +19,8 @@
       <file leaf-file-name="PyBMRB.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/PyBMRB.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="742">
-              <caret line="196" column="30" selection-start-line="196" selection-start-column="30" selection-end-line="196" selection-end-column="30" />
+            <state relative-caret-position="816">
+              <caret line="166" column="25" selection-start-line="166" selection-start-column="25" selection-end-line="166" selection-end-column="25" />
               <folding>
                 <element signature="e#0#37#0" expanded="true" />
               </folding>
@@ -44,8 +47,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="182" />
-    <option name="y" value="36" />
+    <option name="x" value="1861" />
+    <option name="y" value="83" />
     <option name="width" value="1400" />
     <option name="height" value="1000" />
   </component>
@@ -55,7 +58,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -67,6 +69,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -146,14 +149,15 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="182" y="36" width="1400" height="1000" extended-state="0" />
+    <frame x="1861" y="83" width="1400" height="1000" extended-state="0" />
+    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24964234" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24928571" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Python Console" order="7" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.32998884" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.32960895" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Terminal" order="7" />
       <window_info id="Favorites" order="2" side_tool="true" />
@@ -171,6 +175,46 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/PyBMRB.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2445">
+          <caret line="166" column="25" lean-forward="true" selection-start-line="166" selection-start-column="25" selection-end-line="166" selection-end-column="25" />
+          <folding>
+            <element signature="e#0#37#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PyBMRB.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2865">
+          <caret line="196" column="29" selection-start-line="196" selection-start-column="29" selection-end-line="196" selection-end-column="29" />
+          <folding>
+            <element signature="e#0#37#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PyBMRB.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2940">
+          <caret line="196" column="29" selection-start-line="196" selection-start-column="29" selection-end-line="196" selection-end-column="29" />
+          <folding>
+            <element signature="e#0#37#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PyBMRB.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2865">
+          <caret line="196" column="30" selection-start-line="196" selection-start-column="30" selection-end-line="196" selection-end-column="30" />
+          <folding>
+            <element signature="e#0#37#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/PyBMRB.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1785">
@@ -225,8 +269,8 @@
     <entry file="file://$PROJECT_DIR$/hsqc.py" />
     <entry file="file://$PROJECT_DIR$/PyBMRB.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="742">
-          <caret line="196" column="30" selection-start-line="196" selection-start-column="30" selection-end-line="196" selection-end-column="30" />
+        <state relative-caret-position="816">
+          <caret line="166" column="25" selection-start-line="166" selection-start-column="25" selection-end-line="166" selection-end-column="25" />
           <folding>
             <element signature="e#0#37#0" expanded="true" />
           </folding>
