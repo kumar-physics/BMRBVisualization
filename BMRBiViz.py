@@ -4,7 +4,25 @@ import plotly
 import sys
 import csv
 import numpy as np
+import json
 
+# Determine if we are running in python3
+PY3 = (sys.version_info[0] == 3)
+
+# pylint: disable=wrong-import-position,no-name-in-module
+# pylint: disable=import-error,wrong-import-order
+# Python version dependent loads
+if PY3:
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError, URLError
+    from io import StringIO, BytesIO
+else:
+    from urllib2 import urlopen, HTTPError, URLError, Request
+    from cStringIO import StringIO
+    BytesIO = StringIO
+
+_API_URL = "http://webapi.bmrb.wisc.edu/v2"
+#http://webapi.bmrb.wisc.edu/v2/search/chemical_shifts?comp_id=ASP&atom_id=HD2
 
 class Spectra(object):
 
@@ -194,7 +212,105 @@ class Histogram(object):
     def __init__(self):
         self.data_dir = '/home/kumaran/bmrbvis'
 
+    def get_histogram_api(self, residue, atom, filtered = True, sd_limit = 10, normalized = False):
+        url = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom)
+        r = urlopen(url)
+        d = json.loads(r.read())
+        x=[i[d['columns'].index('Atom_chem_shift.Val')] for i in d['data']]
+        if filtered:
+            mean = np.mean(x)
+            sd = np.std(x)
+            lb = mean - (sd_limit*sd)
+            ub = mean + (sd_limit*sd)
+            x = [i for i in x if i > lb and i < ub]
+        if normalized:
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm = 'probability')
+        else:
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom))
+        return data
+
+    def get_histogram2d_api(self, residue1, atom1, residue2, atom2, filtered=True, sd_limit=10, normalized=False):
+        url1 = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue1, atom1)
+        url2 = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue2, atom2)
+        r1=urlopen(url1)
+        r2=urlopen(url2)
+        d1 = json.loads(r1.read())
+        d={}
+        for i in d1['data']:
+            entry_id = i[d1['columns'].index('Atom_chem_shift.Entry_ID')]
+            seq_id= i[d1['columns'].index('Atom_chem_shift.Comp_index_ID')]
+            d["{}-{}".format(entry_id, seq_id)] = i[d1['columns'].index('Atom_chem_shift.Val')]
+        #x = [i[d1['columns'].index('Atom_chem_shift.Val')] for i in d1['data']]
+        d2 = json.loads(r2.read())
+        x=[]
+        y=[]
+        for i in d2['data']:
+            entry_id = i[d2['columns'].index('Atom_chem_shift.Entry_ID')]
+            seq_id = i[d2['columns'].index('Atom_chem_shift.Comp_index_ID')]
+            try:
+                k="{}-{}".format(entry_id, seq_id)
+                x.append(d[k])
+                y.append(i[d2['columns'].index('Atom_chem_shift.Val')])
+            except KeyError:
+                pass
+
+
+       # y = [i[d2['columns'].index('Atom_chem_shift.Val')] for i in d2['data']]
+        if filtered:
+            meanx = np.mean(x)
+            meany = np.mean(y)
+            sdx=np.std(x)
+            sdy = np.std(y)
+            lbx = meanx - (sd_limit*sdx)
+            lby = meany - (sd_limit*sdy)
+            ubx = meanx + (sd_limit * sdx)
+            uby = meany + (sd_limit * sdy)
+            x = [i for i in x if i > lbx and i < ubx]
+            y = [i for i in y if i > lby and i < uby]
+
+
+        if normalized:
+            data = [plotly.graph_objs.Histogram2dContour(x=x, y = y, histnorm = 'probability'),
+                    plotly.graph_objs.Histogram(
+                        y=y,
+                        xaxis='x2',
+                        name="{}-{}".format(residue2, atom2),
+                        histnorm = 'probability'
+                    ),
+                    plotly.graph_objs.Histogram(
+                        x=x,
+                        yaxis='y2',
+                        name="{}-{}".format(residue1, atom1),
+                        histnorm = 'probability'
+                    )
+                    ]
+        else:
+            data = [plotly.graph_objs.Histogram2dContour(x=x, y=y),
+                    plotly.graph_objs.Histogram(
+                        y=y,
+                        xaxis='x2',
+                        name="{}-{}".format(residue2, atom2)
+                    ),
+                    plotly.graph_objs.Histogram(
+                        x=x,
+                        yaxis='y2',
+                        name="{}-{}".format(residue1, atom1)
+                    )
+                    ]
+
+
+        return data
+
+
+
+
+
+
+
+
     def get_histogram(self, residue, atom, filtered = True, sd_limit = 10, normalized = False):
+        url = _API_URL+"search/chemical_shifts?comp_id={}&atom_id={}".format(residue,atom)
+
         data_file = '{}/{}_{}_sel.txt'.format(self.data_dir, residue, atom)
         with open(data_file) as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
@@ -305,11 +421,11 @@ class Histogram(object):
                 showgrid=True
             ),
             hovermode='closest',
-            showlegend=True,
+            showlegend=True
 
 
             )
-        data = self.get_histogram2d(residue, atom1, residue, atom2, filtered, sd_limit, normalized)
+        data = self.get_histogram2d_api(residue, atom1, residue, atom2, filtered, sd_limit, normalized)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = 'histogram2d.html'
         plotly.offline.plot(fig, filename=out_file)
