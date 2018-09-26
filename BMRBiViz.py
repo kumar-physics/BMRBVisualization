@@ -270,7 +270,7 @@ class Histogram(object):
 
 
         if normalized:
-            data = [plotly.graph_objs.Histogram2dContour(x=x, y = y, histnorm = 'probability'),
+            data = [plotly.graph_objs.Histogram2dContour(x=x, y = y, histnorm = 'probability',colorscale = 'Jet'),
                     plotly.graph_objs.Histogram(
                         y=y,
                         xaxis='x2',
@@ -285,7 +285,7 @@ class Histogram(object):
                     )
                     ]
         else:
-            data = [plotly.graph_objs.Histogram2dContour(x=x, y=y),
+            data = [plotly.graph_objs.Histogram2dContour(x=x, y=y,colorscale = 'Jet'),
                     plotly.graph_objs.Histogram(
                         y=y,
                         xaxis='x2',
@@ -300,13 +300,6 @@ class Histogram(object):
 
 
         return data
-
-
-
-
-
-
-
 
     def get_histogram(self, residue, atom, filtered = True, sd_limit = 10, normalized = False):
         url = _API_URL+"search/chemical_shifts?comp_id={}&atom_id={}".format(residue,atom)
@@ -400,13 +393,15 @@ class Histogram(object):
             xaxis=dict(
                 zeroline=False,
                 domain=[0, 0.85],
-                showgrid = True
+                showgrid = True,
+                title = '{}-{} [ppm]'.format(residue,atom1)
 
             ),
             yaxis=dict(
                 zeroline=False,
                 domain=[0, 0.85],
-                showgrid=True
+                showgrid=True,
+                title = '{}-{} [ppm]'.format(residue, atom2)
 
             ),
             xaxis2=dict(
@@ -421,9 +416,7 @@ class Histogram(object):
                 showgrid=True
             ),
             hovermode='closest',
-            showlegend=True
-
-
+            showlegend=False
             )
         data = self.get_histogram2d_api(residue, atom1, residue, atom2, filtered, sd_limit, normalized)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
@@ -438,7 +431,7 @@ class Histogram(object):
             barmode = 'stack',
             xaxis = dict(title = 'Chemical Shift [ppm]'),
             yaxis = dict(title = 'Count'))
-        data = [self.get_histogram(residue,atom, filtered, sd_limit, normalized)]
+        data = [self.get_histogram_api(residue,atom, filtered, sd_limit, normalized)]
         fig = plotly.graph_objs.Figure( data = data, layout = layout)
         out_file = '{}_{}.html'.format(residue,atom)
         plotly.offline.plot(fig, filename = out_file)
@@ -448,7 +441,7 @@ class Histogram(object):
         for atm in atom_list:
             residue = atm.split("-")[0]
             atom = atm.split("-")[1]
-            data.append(self.get_histogram(residue,atom,filtered,sd_limit,normalized))
+            data.append(self.get_histogram_api(residue,atom,filtered,sd_limit,normalized))
         layout = plotly.graph_objs.Layout(
             barmode='stack',
             xaxis=dict(title='Chemical Shift [ppm]'),
@@ -466,4 +459,4 @@ if __name__ == "__main__":
     p = Histogram()
     #atlist = ['ASP-HA','GLN-HB2']
     #p.multiple_atom(atlist,normalized=False)
-    p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
+    p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3], normalized=True)
