@@ -225,12 +225,61 @@ class Histogram(object):
             sd = np.std(x)
             lb = mean - (sd_limit * sd)
             ub = mean + (sd_limit * sd)
-            x = [i for i in x if i > lb and i < ub]
+            x = [i for i in x if lb < i and i  < ub]
         if normalized:
             data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability')
         else:
             data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom))
         return data
+
+    def get_conditional_histogram_api(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
+        url = _API_URL + "/search/chemical_shifts?comp_id={}".format(residue)
+        r = urlopen(url)
+        d1 = json.loads(r.read())
+        d={}
+        entry_id_index = d1['columns'].index('Atom_chem_shift.Entry_ID')
+        seq_id_index = d1['columns'].index('Atom_chem_shift.Comp_index_ID')
+        res_id_index = d1['columns'].index('Atom_chem_shift.Comp_ID')
+        atom_id_index= d1['columns'].index('Atom_chem_shift.Atom_ID')
+        cs_id_index = d1['columns'].index('Atom_chem_shift.Val')
+        for i in d1['data']:
+            entry_id = i[entry_id_index]
+            seq_id = i[seq_id_index]
+            res_id = i[res_id_index]
+            atom_id = i[atom_id_index]
+            d['{}-{}-{}-{}'.format(entry_id,seq_id,res_id,atom_id)] = i[cs_id_index]
+        filter_list = []
+        for k in d.keys():
+            for i in range(len(atomlist)):
+                if 'H' in atomlist[i]:
+                    epsilon = 0.1
+                else:
+                    epsilon = 0.5
+                if k.split("-")[-1]==atomlist[i] and cslist[i] + epsilon > d[k] and d[k] > cslist[i] - epsilon:
+                    filter_list.append('{}-{}'.format(k.split("-")[0],k.split("-")[1]))
+        x=[]
+        filter_list = list(set(filter_list))
+        for i in filter_list:
+            try:
+                k='{}-{}-{}-{}'.format(i.split("-")[0],i.split("-")[1],residue,atom)
+                x.append(d[k])
+            except KeyError:
+                pass
+        if filtered:
+            mean = np.mean(x)
+            sd = np.std(x)
+            lb = mean - (sd_limit * sd)
+            ub = mean + (sd_limit * sd)
+            x = [i for i in x if i > lb and i < ub]
+        if normalized:
+            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom), histnorm='probability')
+        else:
+            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom))
+        return data
+
+
+
+
 
     def get_histogram2d_api(self, residue1, atom1, residue2, atom2, filtered=True, sd_limit=10, normalized=False):
         url1 = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue1, atom1)
@@ -270,6 +319,20 @@ class Histogram(object):
             x = [i for i in x if i > lbx and i < ubx]
             y = [i for i in y if i > lby and i < uby]
 
+            if 'H' in atom1:
+                binsizex = 0.01
+            else:
+                binsizex = 0.5
+
+            if 'H' in atom2:
+                binsizey = 0.01
+            else:
+                binsizey = 0.5
+
+            nbinsx = round((max(x)-min(x))/binsizex)
+            nbinsy = round((max(y) - min(y)) / binsizey)
+            #print (nbinsx,nbinsy,binsizex,binsizey)
+
         if normalized:
             data = [plotly.graph_objs.Histogram2dContour(x=x, y=y, histnorm='probability', colorscale='Jet'),
                     plotly.graph_objs.Histogram(
@@ -290,10 +353,12 @@ class Histogram(object):
                     plotly.graph_objs.Histogram(
                         y=y,
                         xaxis='x2',
+                        nbinsy = nbinsx,
                         name="{}-{}".format(residue2, atom2)
                     ),
                     plotly.graph_objs.Histogram(
                         x=x,
+                        nbinsx = nbinsy,
                         yaxis='y2',
                         name="{}-{}".format(residue1, atom1)
                     )
@@ -347,9 +412,9 @@ class Histogram(object):
             sdx = np.std(x)
             sdy = np.std(y)
             lbx = meanx - (sd_limit * sdx)
-            lby = meanx - (sd_limit * sdy)
+            lby = meany - (sd_limit * sdy)
             ubx = meanx + (sd_limit * sdx)
-            uby = meanx + (sd_limit * sdy)
+            uby = meany + (sd_limit * sdy)
             x = [i for i in x if i > lbx and i < ubx]
             y = [i for i in y if i > lby and i < uby]
 
@@ -443,9 +508,24 @@ class Histogram(object):
         out_file = 'Multiple_atom_histogram.html'
         plotly.offline.plot(fig, filename=out_file)
 
+    def conditional_histogram(self,residue,atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
+        layout = plotly.graph_objs.Layout(
+            barmode='stack',
+            xaxis=dict(title='Chemical Shift [ppm]'),
+            yaxis=dict(title='Count'))
+        data = [self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized),
+                self.get_histogram_api(residue,atom,filtered, sd_limit, normalized)]
+        fig = plotly.graph_objs.Figure(data=data, layout=layout)
+        out_file = '{}_{}.html'.format(residue, atom)
+        plotly.offline.plot(fig, filename=out_file)
+
+
 
 if __name__ == "__main__":
     p = Histogram()
-    atlist = ['ASP-HA', 'GLN-HB2']
-    p.multiple_atom(atlist, normalized=False)
+    #atlist = ['ASP-HA', 'GLN-HB2']
+    #p.multiple_atom(atlist, normalized=False)
     # p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
+    atmlist = ['N']
+    cslist = [125.0]
+    p.conditional_histogram('CYS','N',atmlist,cslist)
