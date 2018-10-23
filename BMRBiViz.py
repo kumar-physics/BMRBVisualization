@@ -227,9 +227,9 @@ class Histogram(object):
             ub = mean + (sd_limit * sd)
             x = [i for i in x if lb < i and i  < ub]
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability')
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom))
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom),opacity=0.75)
         return data
 
     def get_conditional_histogram_api(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
@@ -272,9 +272,9 @@ class Histogram(object):
             ub = mean + (sd_limit * sd)
             x = [i for i in x if i > lb and i < ub]
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom), histnorm='probability')
+            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom))
+            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom),opacity=0.75)
         return data
 
 
@@ -510,7 +510,7 @@ class Histogram(object):
 
     def conditional_histogram(self,residue,atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
         layout = plotly.graph_objs.Layout(
-            barmode='stack',
+            barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title='Count'))
         data = [self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized),
@@ -525,7 +525,7 @@ if __name__ == "__main__":
     p = Histogram()
     #atlist = ['ASP-HA', 'GLN-HB2']
     #p.multiple_atom(atlist, normalized=False)
-    # p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
-    atmlist = ['N']
-    cslist = [125.0]
-    p.conditional_histogram('CYS','N',atmlist,cslist)
+    #p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3],filtered=True,sd_limit=5)
+    atmlist = ['HE21']
+    cslist = [7.55]
+    p.conditional_histogram('GLN','HE22',atmlist,cslist)
