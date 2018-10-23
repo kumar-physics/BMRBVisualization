@@ -216,7 +216,8 @@ class Histogram(object):
         self.data_dir = '/home/kumaran/bmrbvis'
 
     def get_histogram_api(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
-        url = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom)
+        url = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom))
+        url.add_header('Application', 'BMRBiViz')
         r = urlopen(url)
         d = json.loads(r.read())
         x = [i[d['columns'].index('Atom_chem_shift.Val')] for i in d['data']]
@@ -233,7 +234,8 @@ class Histogram(object):
         return data
 
     def get_conditional_histogram_api(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
-        url = _API_URL + "/search/chemical_shifts?comp_id={}".format(residue)
+        url =Request( _API_URL + "/search/chemical_shifts?comp_id={}".format(residue))
+        url.add_header('Application','BMRBiViz')
         r = urlopen(url)
         d1 = json.loads(r.read())
         d={}
@@ -255,26 +257,43 @@ class Histogram(object):
                     epsilon = 0.1
                 else:
                     epsilon = 0.5
-                if k.split("-")[-1]==atomlist[i] and cslist[i] + epsilon > d[k] and d[k] > cslist[i] - epsilon:
+                if k.split("-")[-1]==atomlist[i] and (cslist[i] + epsilon < d[k] or d[k] < cslist[i] - epsilon):
                     filter_list.append('{}-{}'.format(k.split("-")[0],k.split("-")[1]))
         x=[]
         filter_list = list(set(filter_list))
-        for i in filter_list:
-            try:
-                k='{}-{}-{}-{}'.format(i.split("-")[0],i.split("-")[1],residue,atom)
-                x.append(d[k])
-            except KeyError:
-                pass
+        # for i in filter_list:
+        #     try:
+        #         k='{}-{}-{}-{}'.format(i.split("-")[0],i.split("-")[1],residue,atom)
+        #         x.append(d[k])
+        #     except KeyError:
+        #         pass
+        for k in d.keys():
+            atm_id = '{}-{}'.format(k.split("-")[0],k.split("-")[1])
+            if atm_id not in filter_list:
+                try:
+                    ent_id = '{}-{}-{}-{}'.format(k.split("-")[0],k.split("-")[1],residue,atom)
+                    x.append(d[ent_id])
+                except KeyError:
+                    pass
+
         if filtered:
             mean = np.mean(x)
             sd = np.std(x)
             lb = mean - (sd_limit * sd)
             ub = mean + (sd_limit * sd)
             x = [i for i in x if i > lb and i < ub]
+        filter_values = ''
+        for i in range(len(atomlist)):
+            if i==len(atomlist):
+                filter_values += '{}:{}'.format(atomlist[i], cslist[i])
+            else:
+                filter_values += '{}:{},'.format(atomlist[i],cslist[i])
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
+            #data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values), histnorm='probability')
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom),opacity=0.75)
+            #data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom),opacity=0.75)
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom,filter_values))
         return data
 
 
@@ -282,8 +301,10 @@ class Histogram(object):
 
 
     def get_histogram2d_api(self, residue1, atom1, residue2, atom2, filtered=True, sd_limit=10, normalized=False):
-        url1 = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue1, atom1)
-        url2 = _API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue2, atom2)
+        url1 = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue1, atom1))
+        url2 = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue2, atom2))
+        url1.add_header('Application', 'BMRBiViz')
+        url2.add_header('Application', 'BMRBiViz')
         r1 = urlopen(url1)
         r2 = urlopen(url2)
         d1 = json.loads(r1.read())
@@ -525,7 +546,7 @@ if __name__ == "__main__":
     p = Histogram()
     #atlist = ['ASP-HA', 'GLN-HB2']
     #p.multiple_atom(atlist, normalized=False)
-    #p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3],filtered=True,sd_limit=5)
-    atmlist = ['HE21']
-    cslist = [7.55]
-    p.conditional_histogram('GLN','HE22',atmlist,cslist)
+    p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
+    #atmlist = ['CB']
+    #cslist = [69.0]
+    #p.conditional_histogram('TYR','CA',atmlist,cslist)
