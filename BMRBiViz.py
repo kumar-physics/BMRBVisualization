@@ -269,12 +269,10 @@ class Histogram(object):
         #         pass
         for k in d.keys():
             atm_id = '{}-{}'.format(k.split("-")[0],k.split("-")[1])
-            if atm_id not in filter_list:
-                try:
-                    ent_id = '{}-{}-{}-{}'.format(k.split("-")[0],k.split("-")[1],residue,atom)
-                    x.append(d[ent_id])
-                except KeyError:
-                    pass
+            if atm_id not in filter_list and k.split("-")[2] == residue and k.split("-")[3]== atom:
+                #ent_id = '{}-{}-{}-{}'.format(k.split("-")[0],k.split("-")[1],residue,atom)
+                x.append(d[k])
+
 
         if filtered:
             mean = np.mean(x)
@@ -284,16 +282,14 @@ class Histogram(object):
             x = [i for i in x if i > lb and i < ub]
         filter_values = ''
         for i in range(len(atomlist)):
-            if i==len(atomlist):
+            if i==len(atomlist)-1:
                 filter_values += '{}:{}'.format(atomlist[i], cslist[i])
             else:
                 filter_values += '{}:{},'.format(atomlist[i],cslist[i])
         if normalized:
-            #data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values), histnorm='probability')
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values), histnorm='probability', opacity=0.75)
         else:
-            #data = plotly.graph_objs.Histogram(x=x, name="Filtered {}-{}".format(residue, atom),opacity=0.75)
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom,filter_values))
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom,filter_values, opacity=0.75))
         return data
 
 
@@ -388,8 +384,6 @@ class Histogram(object):
         return data
 
     def get_histogram(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
-        url = _API_URL + "search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom)
-
         data_file = '{}/{}_{}_sel.txt'.format(self.data_dir, residue, atom)
         with open(data_file) as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
