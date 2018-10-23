@@ -23,7 +23,7 @@ else:
     BytesIO = StringIO
 
 _API_URL = "http://webapi.bmrb.wisc.edu/v2"
-
+_NOTEBOOK = False
 
 # http://webapi.bmrb.wisc.edu/v2/search/chemical_shifts?comp_id=ASP&atom_id=HD2
 
@@ -31,6 +31,8 @@ class Spectra(object):
 
     def __init__(self):
         print("PyNMRSTAR version : {}".format(pynmrstar.__version__))
+        if _NOTEBOOK:
+            plotly.offline.init_notebook_mode(connected=True)
         # self.plotn15_hsqc([17074,17076,17077],'entry')
 
     def getEntry(self, entryid):
@@ -207,13 +209,18 @@ class Spectra(object):
             hovermode='closest',
             title=title)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        plotly.offline.plot(fig, filename=outfilename, auto_open=True)
+        if _NOTEBOOK:
+            plotly.offline.iplot(fig)
+        else:
+            plotly.offline.plot(fig, filename=outfilename, auto_open=True)
 
 
 class Histogram(object):
 
     def __init__(self):
         self.data_dir = '/home/kumaran/bmrbvis'
+        if _NOTEBOOK:
+            plotly.offline.init_notebook_mode(connected=True)
 
     def get_histogram_api(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
         url = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom))
@@ -497,17 +504,23 @@ class Histogram(object):
         data = self.get_histogram2d_api(residue, atom1, residue, atom2, filtered, sd_limit, normalized)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = 'histogram2d.html'
-        plotly.offline.plot(fig, filename=out_file)
+        if _NOTEBOOK:
+            plotly.offline.iplot(fig)
+        else:
+            plotly.offline.plot(fig, filename=out_file)
 
     def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
         layout = plotly.graph_objs.Layout(
-            barmode='stack',
+            barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title='Count'))
         data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = '{}_{}.html'.format(residue, atom)
-        plotly.offline.plot(fig, filename=out_file)
+        if _NOTEBOOK:
+            plotly.offline.iplot(fig)
+        else:
+            plotly.offline.plot(fig, filename=out_file)
 
     def multiple_atom(self, atom_list, filtered=True, sd_limit=10, normalized=False):
         data = []
@@ -516,23 +529,30 @@ class Histogram(object):
             atom = atm.split("-")[1]
             data.append(self.get_histogram_api(residue, atom, filtered, sd_limit, normalized))
         layout = plotly.graph_objs.Layout(
-            barmode='stack',
+            barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title='Count'))
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = 'Multiple_atom_histogram.html'
-        plotly.offline.plot(fig, filename=out_file)
+        if _NOTEBOOK:
+            plotly.offline.iplot(fig)
+        else:
+            plotly.offline.plot(fig, filename=out_file)
 
     def conditional_histogram(self,residue,atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
         layout = plotly.graph_objs.Layout(
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title='Count'))
-        data = [self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized),
-                self.get_histogram_api(residue,atom,filtered, sd_limit, normalized)]
+        data = [self.get_histogram_api(residue,atom,filtered, sd_limit, normalized),
+                self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized)
+                ]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = '{}_{}.html'.format(residue, atom)
-        plotly.offline.plot(fig, filename=out_file)
+        if _NOTEBOOK:
+            plotly.offline.iplot(fig)
+        else:
+            plotly.offline.plot(fig, filename=out_file)
 
 
 
