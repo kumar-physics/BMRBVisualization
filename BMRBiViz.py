@@ -510,10 +510,14 @@ class Histogram(object):
             plotly.offline.plot(fig, filename=out_file)
 
     def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
+        if normalized:
+            count = 'Density'
+        else:
+            count = 'Count'
         layout = plotly.graph_objs.Layout(
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
-            yaxis=dict(title='Count'))
+            yaxis=dict(title=count))
         data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = '{}_{}.html'.format(residue, atom)
@@ -523,6 +527,10 @@ class Histogram(object):
             plotly.offline.plot(fig, filename=out_file)
 
     def multiple_atom(self, atom_list, filtered=True, sd_limit=10, normalized=False):
+        if normalized:
+            count = 'Density'
+        else:
+            count = 'Count'
         data = []
         for atm in atom_list:
             residue = atm.split("-")[0]
@@ -531,7 +539,7 @@ class Histogram(object):
         layout = plotly.graph_objs.Layout(
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
-            yaxis=dict(title='Count'))
+            yaxis=dict(title=count))
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = 'Multiple_atom_histogram.html'
         if _NOTEBOOK:
@@ -540,10 +548,14 @@ class Histogram(object):
             plotly.offline.plot(fig, filename=out_file)
 
     def conditional_histogram(self,residue,atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
+        if normalized:
+            count = 'Density'
+        else:
+            count = 'Count'
         layout = plotly.graph_objs.Layout(
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
-            yaxis=dict(title='Count'))
+            yaxis=dict(title=count))
         data = [self.get_histogram_api(residue,atom,filtered, sd_limit, normalized),
                 self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized)
                 ]
