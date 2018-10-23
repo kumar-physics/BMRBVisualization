@@ -228,9 +228,9 @@ class Histogram(object):
             ub = mean + (sd_limit * sd)
             x = [i for i in x if lb < i and i  < ub]
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability')
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom))
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom),opacity=0.75)
         return data
 
     def get_conditional_histogram_api(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
@@ -269,12 +269,10 @@ class Histogram(object):
         #         pass
         for k in d.keys():
             atm_id = '{}-{}'.format(k.split("-")[0],k.split("-")[1])
-            if atm_id not in filter_list:
-                try:
-                    ent_id = '{}-{}-{}-{}'.format(k.split("-")[0],k.split("-")[1],residue,atom)
-                    x.append(d[ent_id])
-                except KeyError:
-                    pass
+            if atm_id not in filter_list and k.split("-")[2] == residue and k.split("-")[3]== atom:
+                #ent_id = '{}-{}-{}-{}'.format(k.split("-")[0],k.split("-")[1],residue,atom)
+                x.append(d[k])
+
 
         if filtered:
             mean = np.mean(x)
@@ -284,14 +282,14 @@ class Histogram(object):
             x = [i for i in x if i > lb and i < ub]
         filter_values = ''
         for i in range(len(atomlist)):
-            if i==len(atomlist):
+            if i==len(atomlist)-1:
                 filter_values += '{}:{}'.format(atomlist[i], cslist[i])
             else:
                 filter_values += '{}:{},'.format(atomlist[i],cslist[i])
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values), histnorm='probability')
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values), histnorm='probability', opacity=0.75)
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom,filter_values))
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom,filter_values, opacity=0.75))
         return data
 
 
@@ -527,7 +525,7 @@ class Histogram(object):
 
     def conditional_histogram(self,residue,atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
         layout = plotly.graph_objs.Layout(
-            barmode='stack',
+            barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title='Count'))
         data = [self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized),
