@@ -340,8 +340,10 @@ class Histogram(object):
             lby = meany - (sd_limit * sdy)
             ubx = meanx + (sd_limit * sdx)
             uby = meany + (sd_limit * sdy)
-            x = [i for i in x if i > lbx and i < ubx]
-            y = [i for i in y if i > lby and i < uby]
+            x1 = [x[i] for i in range(len(x)) if x[i] > lbx and x[i] < ubx and y[i] > lby and y[i] < uby]
+            y1 = [y[i] for i in range(len(y)) if y[i] > lby and y[i] < uby and x[i] > lbx and x[i] < ubx]
+            x=x1
+            y=y1
 
             if 'H' in atom1:
                 binsizex = 0.01
@@ -363,11 +365,13 @@ class Histogram(object):
                         y=y,
                         xaxis='x2',
                         name="{}-{}".format(residue2, atom2),
+                        nbinsy=nbinsx,
                         histnorm='probability'
                     ),
                     plotly.graph_objs.Histogram(
                         x=x,
                         yaxis='y2',
+                        nbinsx=nbinsy,
                         name="{}-{}".format(residue1, atom1),
                         histnorm='probability'
                     )
@@ -387,7 +391,7 @@ class Histogram(object):
                         name="{}-{}".format(residue1, atom1)
                     )
                     ]
-
+        print (len(x),len(y))
         return data
 
     def get_histogram(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
@@ -468,6 +472,7 @@ class Histogram(object):
                         name="{}-{}".format(residue1, atom1)
                     )
                     ]
+
         return data
 
     def single_2dhistogram(self, residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False):
