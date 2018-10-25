@@ -402,16 +402,15 @@ class Histogram(object):
             y1 = [y[i] for i in range(len(y)) if lby < y[i] < uby and lbx < x[i] < ubx]
             x = x1
             y = y1
-        if 'H' in atom1:
-            binsizey = 0.01
-        else:
-            binsizey = 0.5
-
         if 'H' in atom2:
-            binsizex = 0.01
+            binsizey = 0.05
         else:
-            binsizex = 0.5
+            binsizey = 0.25
 
+        if 'H' in atom1:
+            binsizex = 0.05
+        else:
+            binsizex = 0.25
         nbinsx = round((max(x) - min(x)) / binsizex)
         nbinsy = round((max(y) - min(y)) / binsizey)
         if normalized:
@@ -436,12 +435,12 @@ class Histogram(object):
                     plotly.graph_objs.Histogram(
                         y=y,
                         xaxis='x2',
-                        nbinsy=nbinsx,
+                        nbinsy=nbinsy,
                         name="{}-{}".format(residue, atom2)
                     ),
                     plotly.graph_objs.Histogram(
                         x=x,
-                        nbinsx=nbinsy,
+                        nbinsx=nbinsx,
                         yaxis='y2',
                         name="{}-{}".format(residue, atom1)
                     )
