@@ -1,10 +1,11 @@
 from __future__ import print_function
-import pynmrstar
-import plotly
-import sys
-import csv
-import numpy as np
+
 import json
+import numpy as np
+import sys
+
+import plotly
+import pynmrstar
 
 # Determine if we are running in python3
 PY3 = (sys.version_info[0] == 3)
@@ -14,10 +15,8 @@ PY3 = (sys.version_info[0] == 3)
 # Python version dependent loads
 if PY3:
     from urllib.request import urlopen, Request
-    from urllib.error import HTTPError, URLError
-    from io import StringIO, BytesIO
 else:
-    from urllib2 import urlopen, HTTPError, URLError, Request
+    from urllib2 import urlopen, Request
     from cStringIO import StringIO
 
     BytesIO = StringIO
@@ -25,54 +24,75 @@ else:
 _API_URL = "http://webapi.bmrb.wisc.edu/v2"
 _NOTEBOOK = False
 
+
 # http://webapi.bmrb.wisc.edu/v2/search/chemical_shifts?comp_id=ASP&atom_id=HD2
 
 class Spectra(object):
 
     def __init__(self):
-        print("PyNMRSTAR version : {}".format(pynmrstar.__version__))
+        # print("PyNMRSTAR version : {}".format(pynmrstar.__version__))
         if _NOTEBOOK:
             plotly.offline.init_notebook_mode(connected=True)
         # self.plotn15_hsqc([17074,17076,17077],'entry')
 
-    def getEntry(self, entryid):
-        if type(entryid) is list:
-            outdata = []
-            for eid in entryid:
-                indata = pynmrstar.Entry.from_database(eid)
-                cs_data = indata.get_tags(
-                    ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
-                     '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
-                     '_Atom_chem_shift.Val'])
+    @staticmethod
+    def get_entry(entryid):
+        """
+        Downloads the chemical shift data for a given entry id or list of entry ids
+        :param entryid: entry or entry ids a list
+        :return: chemical shift data
+        """
 
-                eids = [eid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
-                eid_cs_data = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
-                               cs_data['_Atom_chem_shift.Comp_ID'],
-                               cs_data['_Atom_chem_shift.Atom_ID'],
-                               cs_data['_Atom_chem_shift.Atom_type'],
-                               cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
-                               cs_data['_Atom_chem_shift.Val']]
+        outdata = []
+        if type(entryid) is list:
+            for eid in entryid:
+                try:
+                    indata = pynmrstar.Entry.from_database(eid)
+                    cs_data = indata.get_tags(
+                        ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
+                         '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
+                         '_Atom_chem_shift.Val'])
+
+                    eids = [eid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
+                    eid_cs_data = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
+                                   cs_data['_Atom_chem_shift.Comp_ID'],
+                                   cs_data['_Atom_chem_shift.Atom_ID'],
+                                   cs_data['_Atom_chem_shift.Atom_type'],
+                                   cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
+                                   cs_data['_Atom_chem_shift.Val']]
+                except (OSError, IOError) as e:
+                    print(e)
                 if len(outdata):
                     for i in range(len(eid_cs_data)):
                         outdata[i] = outdata[i] + eid_cs_data[i]
                 else:
                     outdata = eid_cs_data
         else:
-            indata = pynmrstar.Entry.from_database(entryid)
-            cs_data = indata.get_tags(
-                ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
-                 '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID', '_Atom_chem_shift.Val'])
-            eids = [entryid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
-            outdata = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
-                       cs_data['_Atom_chem_shift.Comp_ID'],
-                       cs_data['_Atom_chem_shift.Atom_ID'],
-                       cs_data['_Atom_chem_shift.Atom_type'],
-                       cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
-                       cs_data['_Atom_chem_shift.Val']]
-
+            try:
+                indata = pynmrstar.Entry.from_database(entryid)
+                cs_data = indata.get_tags(
+                    ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
+                     '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
+                     '_Atom_chem_shift.Val'])
+                eids = [entryid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
+                outdata = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
+                           cs_data['_Atom_chem_shift.Comp_ID'],
+                           cs_data['_Atom_chem_shift.Atom_ID'],
+                           cs_data['_Atom_chem_shift.Atom_type'],
+                           cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
+                           cs_data['_Atom_chem_shift.Val']]
+            except (OSError, IOError) as e:
+                print(e)
         return outdata
 
-    def n15_hsqc(self, csdata):
+    @staticmethod
+    def n15_hsqc(csdata):
+        """
+        Converts the output from get_entry into hsqc peak positions
+        :param csdata: output from get_entry
+        :return: easy to plot hsqc peak positions
+        """
+
         sidechainres = ['ARG', 'GLN', 'ASN', 'HIS', 'TRP', 'LYS']
         sidechains = {
             'ARG-HH11': ['HH11''NH1'],
@@ -102,7 +122,6 @@ class Spectra(object):
                     outdata[2].append(None)
                     outdata[3].append(csdata[3][i])
                     outdata[4].append(None)
-
                 else:
                     outdata[1][outdata[0].index(atomid)] = csdata[6][i]
                     outdata[3][outdata[0].index(atomid)] = csdata[3][i]
@@ -144,34 +163,48 @@ class Spectra(object):
 
         return outdata
 
-    def plotn15_hsqc(self, entryids, colorby='res', groupbyres=False):
+    def plotn15_hsqc(self, entryids, colorby=None, groupbyres=False):
+        """
+        Plots hsqc peak positions for a given list of BMRB ids
+        :param entryids: entry id or list of entry ids
+        :param colorby: Color by res/entry (default res for single entry/ entry for multiple entries)
+        :param groupbyres: if TRUE connects the same seq ids by line; default False
+        :return: plotly plot object or html file
+        """
         if type(entryids) is list:
             outfilename = 'n15hsqc.html'
             title = 'Simulated N15-HSQC peak positions'
         else:
             outfilename = '{}.html'.format(entryids)
             title = 'Simulated N15-HSQC peak positions of BMRB entry {}'.format(entryids)
-        csdata = self.getEntry(entryids)
-        hsqcdata = self.n15_hsqc(csdata)
-        if colorby == 'entry':
-            id = 0
-        elif colorby == 'res':
-            id = 2
+        csdata = self.get_entry(entryids)
+        if len(csdata):
+            hsqcdata = self.n15_hsqc(csdata)
         else:
-            print("Colorby error")
+            hsqcdata = []
+        if colorby == 'entry':
+            idx = 0
+        elif colorby == 'res':
+            idx = 2
+        elif type(entryids) is list:
+            idx = 0
+        else:
+            idx = 2
 
-        groups = set([k.split("-")[id] for k in hsqcdata[0]])
+        if len(hsqcdata):
+            groups = set([k.split("-")[idx] for k in hsqcdata[0]])
+        else:
+            groups = []
         data_sets = {}
         for gid in groups:
             data_sets[gid] = [[], [], []]
             for i in range(len(hsqcdata[0])):
-                if hsqcdata[0][i].split("-")[id] == gid:
+                if hsqcdata[0][i].split("-")[idx] == gid:
                     data_sets[gid][0].append(hsqcdata[1][i])
                     data_sets[gid][1].append(hsqcdata[2][i])
                     data_sets[gid][2].append(hsqcdata[0][i])
 
         if groupbyres:
-            id = 1
             groups2 = set(["-".join(k.split("-")[1:4]) for k in hsqcdata[0]])
             data_sets2 = {}
             for gid in groups2:
@@ -209,10 +242,11 @@ class Spectra(object):
             hovermode='closest',
             title=title)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        if _NOTEBOOK:
-            plotly.offline.iplot(fig)
-        else:
-            plotly.offline.plot(fig, filename=outfilename, auto_open=True)
+        if len(data):
+            if _NOTEBOOK:
+                plotly.offline.iplot(fig)
+            else:
+                plotly.offline.plot(fig, filename=outfilename, auto_open=True)
 
 
 class Histogram(object):
@@ -222,7 +256,17 @@ class Histogram(object):
         if _NOTEBOOK:
             plotly.offline.init_notebook_mode(connected=True)
 
-    def get_histogram_api(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
+    @staticmethod
+    def get_histogram_api(residue, atom, filtered=True, sd_limit=10, normalized=False):
+        """
+        Downloads chemical shift data for a given atom in a residue using BMRB API
+        :param residue: Residue name in standard 3 letter code
+        :param atom: IUIPAC atom name
+        :param filtered: True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit: Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :return: Plotly object
+        """
         url = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom))
         url.add_header('Application', 'BMRBiViz')
         r = urlopen(url)
@@ -233,30 +277,45 @@ class Histogram(object):
             sd = np.std(x)
             lb = mean - (sd_limit * sd)
             ub = mean + (sd_limit * sd)
-            x = [i for i in x if lb < i and i  < ub]
+            x = [i for i in x if lb < i < ub]
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability',opacity=0.75)
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom),
+                                               histnorm='probability', opacity=0.75)
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom),opacity=0.75)
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), opacity=0.75)
         return data
 
-    def get_conditional_histogram_api(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
-        url =Request( _API_URL + "/search/chemical_shifts?comp_id={}".format(residue))
-        url.add_header('Application','BMRBiViz')
+    @staticmethod
+    def get_conditional_histogram_api(residue, atom, atomlist, cslist, filtered=True,
+                                      sd_limit=10, normalized=False):
+        """
+        Downloads the chemical shift data for a given atom in a residue and filters based on a other atom chemical
+        shifts in the same residue
+        :param residue: Residue name in standard 3 letter code
+        :param atom: IUIPAC atom name
+        :param atomlist: atom list in IUPAC format as a list
+        :param cslist: corresponding chemical shift list
+        :param filtered: True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit:  Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :return: Plotly object
+        """
+        url = Request(_API_URL + "/search/chemical_shifts?comp_id={}".format(residue))
+        url.add_header('Application', 'BMRBiViz')
         r = urlopen(url)
         d1 = json.loads(r.read())
-        d={}
+        d = {}
         entry_id_index = d1['columns'].index('Atom_chem_shift.Entry_ID')
         seq_id_index = d1['columns'].index('Atom_chem_shift.Comp_index_ID')
         res_id_index = d1['columns'].index('Atom_chem_shift.Comp_ID')
-        atom_id_index= d1['columns'].index('Atom_chem_shift.Atom_ID')
+        atom_id_index = d1['columns'].index('Atom_chem_shift.Atom_ID')
         cs_id_index = d1['columns'].index('Atom_chem_shift.Val')
         for i in d1['data']:
             entry_id = i[entry_id_index]
             seq_id = i[seq_id_index]
             res_id = i[res_id_index]
             atom_id = i[atom_id_index]
-            d['{}-{}-{}-{}'.format(entry_id,seq_id,res_id,atom_id)] = i[cs_id_index]
+            d['{}-{}-{}-{}'.format(entry_id, seq_id, res_id, atom_id)] = i[cs_id_index]
         filter_list = []
         for k in d.keys():
             for i in range(len(atomlist)):
@@ -264,48 +323,47 @@ class Histogram(object):
                     epsilon = 0.1
                 else:
                     epsilon = 0.5
-                if k.split("-")[-1]==atomlist[i] and (cslist[i] + epsilon < d[k] or d[k] < cslist[i] - epsilon):
-                    filter_list.append('{}-{}'.format(k.split("-")[0],k.split("-")[1]))
-        x=[]
+                if k.split("-")[-1] == atomlist[i] and (cslist[i] + epsilon < d[k] or d[k] < cslist[i] - epsilon):
+                    filter_list.append('{}-{}'.format(k.split("-")[0], k.split("-")[1]))
+        x = []
         filter_list = list(set(filter_list))
-        # for i in filter_list:
-        #     try:
-        #         k='{}-{}-{}-{}'.format(i.split("-")[0],i.split("-")[1],residue,atom)
-        #         x.append(d[k])
-        #     except KeyError:
-        #         pass
         for k in d.keys():
-            atm_id = '{}-{}'.format(k.split("-")[0],k.split("-")[1])
-            if atm_id not in filter_list and k.split("-")[2] == residue and k.split("-")[3]== atom:
-                #ent_id = '{}-{}-{}-{}'.format(k.split("-")[0],k.split("-")[1],residue,atom)
+            atm_id = '{}-{}'.format(k.split("-")[0], k.split("-")[1])
+            if atm_id not in filter_list and k.split("-")[2] == residue and k.split("-")[3] == atom:
                 x.append(d[k])
-
-
         if filtered:
             mean = np.mean(x)
             sd = np.std(x)
             lb = mean - (sd_limit * sd)
             ub = mean + (sd_limit * sd)
-            x = [i for i in x if i > lb and i < ub]
+            x = [i for i in x if lb < i < ub]
         filter_values = ''
         for i in range(len(atomlist)):
-            if i==len(atomlist)-1:
+            if i == len(atomlist) - 1:
                 filter_values += '{}:{}'.format(atomlist[i], cslist[i])
             else:
-                filter_values += '{}:{},'.format(atomlist[i],cslist[i])
+                filter_values += '{}:{},'.format(atomlist[i], cslist[i])
         if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values), histnorm='probability', opacity=0.75)
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values),
+                                               histnorm='probability', opacity=0.75)
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom,filter_values, opacity=0.75))
+            data = plotly.graph_objs.Histogram(x=x, name="{}-{}({})".format(residue, atom, filter_values, opacity=0.75))
         return data
 
-
-
-
-
-    def get_histogram2d_api(self, residue1, atom1, residue2, atom2, filtered=True, sd_limit=10, normalized=False):
-        url1 = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue1, atom1))
-        url2 = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue2, atom2))
+    @staticmethod
+    def get_histogram2d_api(residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False):
+        """
+        Calculates the correlation between two atoms in the same residue
+        :param residue: Residue name in standard 3 letter code
+        :param atom1: IUIPAC atom name
+        :param atom2: IUIPAC atom name
+        :param filtered:  True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit: Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :return: Plotly object
+        """
+        url1 = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom1))
+        url2 = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom2))
         url1.add_header('Application', 'BMRBiViz')
         url2.add_header('Application', 'BMRBiViz')
         r1 = urlopen(url1)
@@ -340,31 +398,28 @@ class Histogram(object):
             lby = meany - (sd_limit * sdy)
             ubx = meanx + (sd_limit * sdx)
             uby = meany + (sd_limit * sdy)
-            x1 = [x[i] for i in range(len(x)) if x[i] > lbx and x[i] < ubx and y[i] > lby and y[i] < uby]
-            y1 = [y[i] for i in range(len(y)) if y[i] > lby and y[i] < uby and x[i] > lbx and x[i] < ubx]
-            x=x1
-            y=y1
+            x1 = [x[i] for i in range(len(x)) if lbx < x[i] < ubx and lby < y[i] < uby]
+            y1 = [y[i] for i in range(len(y)) if lby < y[i] < uby and lbx < x[i] < ubx]
+            x = x1
+            y = y1
+        if 'H' in atom1:
+            binsizey = 0.01
+        else:
+            binsizey = 0.5
 
-            if 'H' in atom1:
-                binsizex = 0.01
-            else:
-                binsizex = 0.5
+        if 'H' in atom2:
+            binsizex = 0.01
+        else:
+            binsizex = 0.5
 
-            if 'H' in atom2:
-                binsizey = 0.01
-            else:
-                binsizey = 0.5
-
-            nbinsx = round((max(x)-min(x))/binsizex)
-            nbinsy = round((max(y) - min(y)) / binsizey)
-            #print (nbinsx,nbinsy,binsizex,binsizey)
-
+        nbinsx = round((max(x) - min(x)) / binsizex)
+        nbinsy = round((max(y) - min(y)) / binsizey)
         if normalized:
             data = [plotly.graph_objs.Histogram2dContour(x=x, y=y, histnorm='probability', colorscale='Jet'),
                     plotly.graph_objs.Histogram(
                         y=y,
                         xaxis='x2',
-                        name="{}-{}".format(residue2, atom2),
+                        name="{}-{}".format(residue, atom2),
                         nbinsy=nbinsx,
                         histnorm='probability'
                     ),
@@ -372,7 +427,7 @@ class Histogram(object):
                         x=x,
                         yaxis='y2',
                         nbinsx=nbinsy,
-                        name="{}-{}".format(residue1, atom1),
+                        name="{}-{}".format(residue, atom1),
                         histnorm='probability'
                     )
                     ]
@@ -381,98 +436,16 @@ class Histogram(object):
                     plotly.graph_objs.Histogram(
                         y=y,
                         xaxis='x2',
-                        nbinsy = nbinsx,
-                        name="{}-{}".format(residue2, atom2)
+                        nbinsy=nbinsx,
+                        name="{}-{}".format(residue, atom2)
                     ),
                     plotly.graph_objs.Histogram(
                         x=x,
-                        nbinsx = nbinsy,
+                        nbinsx=nbinsy,
                         yaxis='y2',
-                        name="{}-{}".format(residue1, atom1)
+                        name="{}-{}".format(residue, atom1)
                     )
                     ]
-        print (len(x),len(y))
-        return data
-
-    def get_histogram(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
-        data_file = '{}/{}_{}_sel.txt'.format(self.data_dir, residue, atom)
-        with open(data_file) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            x = []
-            for row in csv_reader:
-                x.append(float(row[7]))
-        if filtered:
-            mean = np.mean(x)
-            sd = np.std(x)
-            lb = mean - (sd_limit * sd)
-            ub = mean + (sd_limit * sd)
-            x = [i for i in x if i > lb and i < ub]
-        if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), histnorm='probability')
-        else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom))
-        return data
-
-    def get_histogram2d(self, residue1, atom1, residue2, atom2, filtered=True, sd_limit=10, normalized=False):
-        data_file1 = '{}/{}_{}_sel.txt'.format(self.data_dir, residue1, atom1)
-        data_file2 = '{}/{}_{}_sel.txt'.format(self.data_dir, residue2, atom2)
-        x = []
-        y = []
-        with open(data_file1) as csv_file1:
-            csv_reader1 = csv.reader(csv_file1, delimiter=',')
-            d1 = {}
-            for row1 in csv_reader1:
-                d1["-".join([row1[0], row1[3]])] = float(row1[7])
-        with open(data_file2) as csv_file2:
-            csv_reader2 = csv.reader(csv_file2, delimiter=',')
-            for row2 in csv_reader2:
-                try:
-                    x.append(d1["-".join([row2[0], row2[3]])])
-                    y.append(float(row2[7]))
-                except KeyError:
-                    pass
-
-        if filtered:
-            meanx = np.mean(x)
-            meany = np.mean(y)
-            sdx = np.std(x)
-            sdy = np.std(y)
-            lbx = meanx - (sd_limit * sdx)
-            lby = meany - (sd_limit * sdy)
-            ubx = meanx + (sd_limit * sdx)
-            uby = meany + (sd_limit * sdy)
-            x = [i for i in x if i > lbx and i < ubx]
-            y = [i for i in y if i > lby and i < uby]
-
-        if normalized:
-            data = [plotly.graph_objs.Histogram2dContour(x=x, y=y, histnorm='probability'),
-                    plotly.graph_objs.Histogram(
-                        y=y,
-                        xaxis='x2',
-                        name="{}-{}".format(residue2, atom2),
-                        histnorm='probability'
-                    ),
-                    plotly.graph_objs.Histogram(
-                        x=x,
-                        yaxis='y2',
-                        name="{}-{}".format(residue1, atom1),
-                        histnorm='probability'
-                    )
-                    ]
-        else:
-            data = [plotly.graph_objs.Histogram2dContour(x=x, y=y),
-                    plotly.graph_objs.Histogram(
-                        y=y,
-                        xaxis='x2',
-                        name="{}-{}".format(residue2, atom2)
-                    ),
-                    plotly.graph_objs.Histogram(
-                        x=x,
-                        yaxis='y2',
-                        name="{}-{}".format(residue1, atom1)
-                    )
-                    ]
-
         return data
 
     def single_2dhistogram(self, residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False):
@@ -506,7 +479,7 @@ class Histogram(object):
             hovermode='closest',
             showlegend=False
         )
-        data = self.get_histogram2d_api(residue, atom1, residue, atom2, filtered, sd_limit, normalized)
+        data = self.get_histogram2d_api(residue, atom1, atom2, filtered, sd_limit, normalized)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = 'histogram2d.html'
         if _NOTEBOOK:
@@ -552,7 +525,7 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def conditional_histogram(self,residue,atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
+    def conditional_histogram(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
         if normalized:
             count = 'Density'
         else:
@@ -561,8 +534,8 @@ class Histogram(object):
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title=count))
-        data = [self.get_histogram_api(residue,atom,filtered, sd_limit, normalized),
-                self.get_conditional_histogram_api(residue, atom, atomlist,cslist,filtered, sd_limit, normalized)
+        data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized),
+                self.get_conditional_histogram_api(residue, atom, atomlist, cslist, filtered, sd_limit, normalized)
                 ]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         out_file = '{}_{}.html'.format(residue, atom)
@@ -572,12 +545,13 @@ class Histogram(object):
             plotly.offline.plot(fig, filename=out_file)
 
 
-
 if __name__ == "__main__":
-    p = Histogram()
-    #atlist = ['ASP-HA', 'GLN-HB2']
-    #p.multiple_atom(atlist, normalized=False)
-    p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
-    #atmlist = ['CB']
-    #cslist = [69.0]
-    #p.conditional_histogram('TYR','CA',atmlist,cslist)
+    s = Spectra()
+    s.plotn15_hsqc('234234234234')
+    # p = Histogram()
+    # atlist = ['ASP-HA', 'GLN-HB2']
+    # p.multiple_atom(atlist, normalized=False)
+    # p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
+    # atmlist = ['CB']
+    # cslist = [69.0]
+    # p.conditional_histogram('TYR','CA',atmlist,cslist)
