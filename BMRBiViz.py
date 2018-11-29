@@ -878,9 +878,9 @@ def _called_directly():
         sys.exit(0)
     # Check for command misuse
     if sum(1 for x in [options.hsqc,
-                       options.hist, options.seq] if x) > 1:
-        print("You can only use one of the --diff, --validate, and --tag "
-              "options at once.")
+                       options.hist, options.seq] if x) != 1:
+        print("You can only use one of the --hsqc, --hist, and --seq "
+              "options  along with --out")
         sys.exit(1)
     if options.outfile is None:
         print ("Output file name must be specified with --out")
