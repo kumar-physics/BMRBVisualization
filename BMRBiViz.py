@@ -45,9 +45,10 @@ class Spectra(object):
         :param entryid: entry or entry ids a list
         :return: chemical shift data
         """
-        if seq is not None:
+        if seq is not None and nn in [3,5,7]:
             outdata = self.predict_from_seq(seq,tag,nn)
         else:
+            print ("Either no sequence or wrong nn value")
             outdata = []
         if type(entryid) is list:
             for eid in entryid:
@@ -109,8 +110,8 @@ class Spectra(object):
         :return: python dictionary object
         """
         fname = 'rcdata/nn_pp_{}_{}_filtered.txt'.format(atom,nn)
-        f = open(fname,'r')
-        dat = f.read().split("\n")[:-1]
+        with open(fname,'r') as f:
+            dat = f.read().split("\n")[:-1]
         if filtered:
             ix = 4
         else:
@@ -547,6 +548,9 @@ class Spectra(object):
 
 
 class Histogram(object):
+    """
+    Generates checmial shift histograms from BMRB database
+    """
 
     def __init__(self):
         self.data_dir = '/home/kumaran/bmrbvis'
@@ -744,7 +748,17 @@ class Histogram(object):
                     ]
         return data
 
-    def single_2dhistogram(self, residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False):
+    def single_2dhistogram(self, residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False, outfilename = None):
+        """
+        Generates chemical shift correlation plots for a given two atoms in a given amino acid
+        :param residue: 3 letter amino acid code
+        :param atom1: IUPAC atom name
+        :param atom2: True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit: Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :param outfilename: output file name
+        :return: writes output in a html file
+        """
         layout = plotly.graph_objs.Layout(
             autosize=True,
             xaxis=dict(
@@ -777,13 +791,26 @@ class Histogram(object):
         )
         data = self.get_histogram2d_api(residue, atom1, atom2, filtered, sd_limit, normalized)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        out_file = 'histogram2d.html'
+        if outfilename is None:
+            out_file = 'histogram2d.html'
+        else:
+            out_file = outfilename
         if _NOTEBOOK:
             plotly.offline.iplot(fig)
         else:
             plotly.offline.plot(fig, filename=out_file)
 
     def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False,outfilename =None):
+        """
+        Generates histgram for a given atom in a given amino acid
+        :param residue: 3 letter amino acid code
+        :param atom: IUPAC atom name
+        :param filtered: True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit: Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :param outfilename: output file name
+        :return: writes output in a html file
+        """
         if normalized:
             count = 'Density'
         else:
@@ -803,7 +830,16 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def multiple_atom(self, atom_list, filtered=True, sd_limit=10, normalized=False):
+    def multiple_atom(self, atom_list, filtered=True, sd_limit=10, normalized=False,outfilename =None):
+        """
+        Generates histogram for a given list of atoms from various amino acids
+        :param atom_list: atom list example ['ALA:CA','GLY:CA','ALA:HA']
+        :param filtered: True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit: Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :param outfilename: output file name
+        :return: writes output in a html file
+        """
         if normalized:
             count = 'Density'
         else:
@@ -818,13 +854,29 @@ class Histogram(object):
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title=count))
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        out_file = 'Multiple_atom_histogram.html'
+        if outfilename is None:
+            out_file = 'Multiple_atom_histogram.html'
+        else:
+            out_file = outfilename
         if _NOTEBOOK:
             plotly.offline.iplot(fig)
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def conditional_histogram(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False):
+    def conditional_histogram(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False,outfilename =None):
+        """
+        Generates chemical shift histogram, which depends on the chemical shift values of given list of atoms
+        in the same amino acid
+        :param residue: 3 letter amino acid code
+        :param atom: IUPAC atom name
+        :param atomlist: known atom list as list
+        :param cslist: corresponding chemical shift list as list
+        :param filtered: True/False Filters based on standard deviation cutoff Default:True
+        :param sd_limit: Number of time Standard deviation for filtering default: 10
+        :param normalized: True/False Plots either Count/Density default: False
+        :param outfilename: output file name
+        :return: writes output in a html file
+        """
         if normalized:
             count = 'Density'
         else:
@@ -837,7 +889,10 @@ class Histogram(object):
                 self.get_conditional_histogram_api(residue, atom, atomlist, cslist, filtered, sd_limit, normalized)
                 ]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        out_file = '{}_{}.html'.format(residue, atom)
+        if outfilename is None:
+            out_file = '{}_{}.html'.format(residue, atom)
+        else:
+            out_file = outfilename
         if _NOTEBOOK:
             plotly.offline.iplot(fig)
         else:
