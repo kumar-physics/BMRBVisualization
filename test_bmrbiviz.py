@@ -1,6 +1,7 @@
 from unittest import TestCase
 import BMRBiViz as BV
 
+
 # class TestHistogram(TestCase):
 #     def test_get_histogram_api(self):
 #         self.fail()
@@ -27,14 +28,18 @@ class TestSpectra(TestCase):
 
     def setUp(self):
         self.Spectra = BV.Spectra()
+
     def test_get_entry(self):
-        self.assertEqual(self.Spectra.get_entry(),[])
-        self.assertGreater(len(self.Spectra.get_entry('15060')),0)
-        self.assertGreater(len(self.Spectra.get_entry(seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE')), 0)
+        self.assertEqual(self.Spectra.get_entry(), [])
+        self.assertGreater(len(self.Spectra.get_entry('15060')), 0)
+        self.assertGreater(len(self.Spectra.get_entry(seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE')),
+                           0)
         self.assertGreater(len(self.Spectra.get_entry(entryid='15060',
-                                                      seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE')), 0)
+                                                      seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE')),
+                           0)
         self.assertGreater(len(self.Spectra.get_entry(entryid='15060',
-                                                      seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE', nn=10)),
+                                                      seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE',
+                                                      nn=10)),
                            0)
 
     # def test__load_pp_dict(self):
