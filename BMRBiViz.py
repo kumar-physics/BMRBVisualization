@@ -6,6 +6,7 @@ import sys
 
 import plotly
 import pynmrstar
+import optparse
 
 # Determine if we are running in python3
 PY3 = (sys.version_info[0] == 3)
@@ -23,11 +24,13 @@ else:
 
 _API_URL = "http://webapi.bmrb.wisc.edu/v2"
 _NOTEBOOK = False
-
-
+__version__ = "1.0"
 # http://webapi.bmrb.wisc.edu/v2/search/chemical_shifts?comp_id=ASP&atom_id=HD2
 
 class Spectra(object):
+    """
+    Generates HSQC peak positions
+    """
 
     def __init__(self):
         # print("PyNMRSTAR version : {}".format(pynmrstar.__version__))
@@ -36,7 +39,7 @@ class Spectra(object):
         # self.plotn15_hsqc([17074,17076,17077],'entry')
 
 
-    def get_entry(self, entryid,seq=None,tag='User',nn=3):
+    def get_entry(self, entryid=None,seq=None,tag='User',nn=3):
         """
         Downloads the chemical shift data for a given entry id or list of entry ids
         :param entryid: entry or entry ids a list
@@ -69,6 +72,10 @@ class Spectra(object):
                         outdata[i] = outdata[i] + eid_cs_data[i]
                 else:
                     outdata = eid_cs_data
+        elif entryid is None and seq is not None:
+            print ('Only prediction no Comparison')
+        elif entryid is None and seq is None:
+            print('Entry ID or Sequence must be specified')
         else:
             try:
                 indata = pynmrstar.Entry.from_database(entryid)
@@ -93,8 +100,15 @@ class Spectra(object):
         return outdata
 
     @staticmethod
-    def load_pp_dict(atom, nn,filtered = True):
-        fname = 'nn_pp_{}_{}_filtered.txt'.format(atom,nn)
+    def _load_pp_dict(atom, nn, filtered = True):
+        """
+        Internal method to load nearest neighbor statistis from lib folder
+        :param atom: atom name
+        :param nn: Tri or Pendta or Hepta (3/5/7)
+        :param filtered: exclude the outliers
+        :return: python dictionary object
+        """
+        fname = 'rcdata/nn_pp_{}_{}_filtered.txt'.format(atom,nn)
         f = open(fname,'r')
         dat = f.read().split("\n")[:-1]
         if filtered:
@@ -109,230 +123,249 @@ class Spectra(object):
 
 
 
-    def predict_from_seq(self,seq,tag,nn=3):
-        atom_list = {'N':'N','H':'H'}
-        nearest_nei = nn
-        aa_dict = {'I':'ILE', 'Q':'GLN', 'G':'GLY', 'E':'GLU', 'C':'CYS',
-                   'D':'ASP', 'S':'SER', 'K':'LYS', 'P':'PRO', 'N':'ASN',
-                   'V':'VAL', 'T':'THR', 'H':'HIS', 'W':'TRP', 'F':'PHE',
-                   'A':'ALA', 'M':'MET', 'L':'LEU', 'R':'ARG', 'Y':'TYR'}
-        if nearest_nei == 3:
-            dict_n3 = self.load_pp_dict('N',1)
-            dict_h3 = self.load_pp_dict('H',1)
-            dict_n = self.load_pp_dict('N', 0)
-            dict_h = self.load_pp_dict('H', 0)
-            eid = []
-            comp_index_id = []
-            comp_id = []
-            atom_id = []
-            atom_type = []
-            cs_list_id = []
-            val = []
-            for i in [0,len(seq)-1]:
-                if aa_dict[seq[i]] != "PRO":
-                    tp = aa_dict[seq[i]]
-                    for atm in atom_list.keys():
-                        eid.append(tag)
-                        comp_index_id.append(i+1)
-                        comp_id.append(aa_dict[seq[i]])
-                        atom_id.append(atm)
-                        atom_type.append(atom_list[atm])
-                        cs_list_id.append('1')
-                        if atm == 'N':
-                            val.append(dict_n[tp])
-                        elif atm == 'H':
-                            val.append(dict_h[tp])
-                        else:
-                            print ("Something wrong")
-            for i in range(1,len(seq)-1):
-                if aa_dict[seq[i]] != "PRO":
-                    tp3= '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
-                    for atm in atom_list.keys():
-                        eid.append(tag)
-                        comp_index_id.append(i+1)
-                        comp_id.append(aa_dict[seq[i]])
-                        atom_id.append(atm)
-                        atom_type.append(atom_list[atm])
-                        cs_list_id.append('1')
-                        if atm == 'N':
-                            val.append(dict_n3[tp3])
-                        elif atm == 'H':
-                            val.append(dict_h3[tp3])
-                        else:
-                            print ("Something wrong")
-        elif nearest_nei == 5:
-            dict_n5 = self.load_pp_dict('N',2)
-            dict_h5 = self.load_pp_dict('H',2)
-            dict_n3 = self.load_pp_dict('N', 1)
-            dict_h3 = self.load_pp_dict('H', 1)
-            dict_n = self.load_pp_dict('N', 0)
-            dict_h = self.load_pp_dict('H', 0)
-            eid = []
-            comp_index_id = []
-            comp_id = []
-            atom_id = []
-            atom_type = []
-            cs_list_id = []
-            val = []
-            for i in [0,1,len(seq)-2,len(seq)-1]:
-                if aa_dict[seq[i]] != "PRO":
-                    if i == 0 or i==len(seq)-1:
-                        tp = aa_dict[seq[i]]
-                        for atm in atom_list.keys():
-                            eid.append(tag)
-                            comp_index_id.append(i+1)
-                            comp_id.append(aa_dict[seq[i]])
-                            atom_id.append(atm)
-                            atom_type.append(atom_list[atm])
-                            cs_list_id.append('1')
-                            if atm == 'N':
-                                val.append(dict_n[tp])
-                            elif atm == 'H':
-                                val.append(dict_h[tp])
-                            else:
-                                print ("Something wrong")
-                    else:
-                        tp3 = '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
-                        for atm in atom_list.keys():
-                            eid.append(tag)
-                            comp_index_id.append(i + 1)
-                            comp_id.append(aa_dict[seq[i]])
-                            atom_id.append(atm)
-                            atom_type.append(atom_list[atm])
-                            cs_list_id.append('1')
-                            if atm == 'N':
-                                val.append(dict_n3[tp3])
-                            elif atm == 'H':
-                                val.append(dict_h3[tp3])
-                            else:
-                                print("Something wrong")
-            for i in range(2, len(seq) - 2):
-                if aa_dict[seq[i]] != "PRO":
-                    tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
-                    tp3 =  '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
-                    for atm in atom_list.keys():
-                        eid.append(tag)
-                        comp_index_id.append(i + 1)
-                        comp_id.append(aa_dict[seq[i]])
-                        atom_id.append(atm)
-                        atom_type.append(atom_list[atm])
-                        cs_list_id.append('1')
-                        if atm == 'N':
-                            try:
-                                val.append(dict_n5[tp5])
-                            except KeyError:
-                                val.append(dict_n3[tp3])
-                        elif atm == 'H':
-                            try:
-                                val.append(dict_h5[tp5])
-                            except KeyError:
-                                val.append(dict_h3[tp3])
-                        else:
-                            print("Something wrong")
-        else:
-            dict_n7 = self.load_pp_dict('N',3)
-            dict_h7 = self.load_pp_dict('H',3)
-            dict_n5 = self.load_pp_dict('N', 2)
-            dict_h5 = self.load_pp_dict('H', 2)
-            dict_n3 = self.load_pp_dict('N', 1)
-            dict_h3 = self.load_pp_dict('H', 1)
-            dict_n = self.load_pp_dict('N', 0)
-            dict_h = self.load_pp_dict('H', 0)
-            eid = []
-            comp_index_id = []
-            comp_id = []
-            atom_id = []
-            atom_type = []
-            cs_list_id = []
-            val = []
-            for i in [0,1,2,len(seq)-3,len(seq)-2,len(seq)-1]:
-                if aa_dict[seq[i]] != "PRO":
-                    if i == 0 or i==len(seq)-1:
-                        tp = aa_dict[seq[i]]
-                        for atm in atom_list.keys():
-                            eid.append(tag)
-                            comp_index_id.append(i+1)
-                            comp_id.append(aa_dict[seq[i]])
-                            atom_id.append(atm)
-                            atom_type.append(atom_list[atm])
-                            cs_list_id.append('1')
-                            if atm == 'N':
-                                val.append(dict_n[tp])
-                            elif atm == 'H':
-                                val.append(dict_h[tp])
-                            else:
-                                print ("Something wrong")
-                    elif i==1 or i == len(seq)-2:
-                        tp3 = '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
-                        for atm in atom_list.keys():
-                            eid.append(tag)
-                            comp_index_id.append(i + 1)
-                            comp_id.append(aa_dict[seq[i]])
-                            atom_id.append(atm)
-                            atom_type.append(atom_list[atm])
-                            cs_list_id.append('1')
-                            if atm == 'N':
-                                val.append(dict_n3[tp3])
-                            elif atm == 'H':
-                                val.append(dict_h3[tp3])
-                            else:
-                                print("Something wrong")
-                    else:
-                        tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
-                        tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
-                        for atm in atom_list.keys():
-                            eid.append(tag)
-                            comp_index_id.append(i + 1)
-                            comp_id.append(aa_dict[seq[i]])
-                            atom_id.append(atm)
-                            atom_type.append(atom_list[atm])
-                            cs_list_id.append('1')
-                            if atm == 'N':
-                                try:
-                                    val.append(dict_n5[tp5])
-                                except KeyError:
+    def predict_from_seq(self,seq = None,tag='User',nn=3):
+        """
+        Predicts pseudo random coil chemical shifts for a given sequence with standard amino acids
+        :param seq: single letter sequence as a string
+        :param tag: Name for the sequence
+        :param nn: Nearest neighbor effect (3 for Tri-peptide, 5 for Penta and 7 for hepta)
+        :return: chemical shift values as a python list
+        """
+        if seq is not None and nn in [3,5,7]:
+            atom_list = {'N':'N','H':'H'}
+            nearest_nei = nn
+            aa_dict = {'I':'ILE', 'Q':'GLN', 'G':'GLY', 'E':'GLU', 'C':'CYS',
+                       'D':'ASP', 'S':'SER', 'K':'LYS', 'P':'PRO', 'N':'ASN',
+                       'V':'VAL', 'T':'THR', 'H':'HIS', 'W':'TRP', 'F':'PHE',
+                       'A':'ALA', 'M':'MET', 'L':'LEU', 'R':'ARG', 'Y':'TYR'}
+            standards_only = True
+            for i in seq:
+                if i not in aa_dict.keys():
+                    standards_only=False
+            if standards_only:
+                if nearest_nei == 3:
+                    dict_n3 = self._load_pp_dict('N', 1)
+                    dict_h3 = self._load_pp_dict('H', 1)
+                    dict_n = self._load_pp_dict('N', 0)
+                    dict_h = self._load_pp_dict('H', 0)
+                    eid = []
+                    comp_index_id = []
+                    comp_id = []
+                    atom_id = []
+                    atom_type = []
+                    cs_list_id = []
+                    val = []
+                    for i in [0,len(seq)-1]:
+                        if aa_dict[seq[i]] != "PRO":
+                            tp = aa_dict[seq[i]]
+                            for atm in atom_list.keys():
+                                eid.append(tag)
+                                comp_index_id.append(i+1)
+                                comp_id.append(aa_dict[seq[i]])
+                                atom_id.append(atm)
+                                atom_type.append(atom_list[atm])
+                                cs_list_id.append('1')
+                                if atm == 'N':
+                                    val.append(dict_n[tp])
+                                elif atm == 'H':
+                                    val.append(dict_h[tp])
+                                else:
+                                    print ("Something wrong")
+                    for i in range(1,len(seq)-1):
+                        if aa_dict[seq[i]] != "PRO":
+                            tp3= '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
+                            for atm in atom_list.keys():
+                                eid.append(tag)
+                                comp_index_id.append(i+1)
+                                comp_id.append(aa_dict[seq[i]])
+                                atom_id.append(atm)
+                                atom_type.append(atom_list[atm])
+                                cs_list_id.append('1')
+                                if atm == 'N':
                                     val.append(dict_n3[tp3])
-                            elif atm == 'H':
-                                try:
-                                    val.append(dict_h5[tp5])
-                                except KeyError:
+                                elif atm == 'H':
                                     val.append(dict_h3[tp3])
+                                else:
+                                    print ("Something wrong")
+                elif nearest_nei == 5:
+                    dict_n5 = self._load_pp_dict('N', 2)
+                    dict_h5 = self._load_pp_dict('H', 2)
+                    dict_n3 = self._load_pp_dict('N', 1)
+                    dict_h3 = self._load_pp_dict('H', 1)
+                    dict_n = self._load_pp_dict('N', 0)
+                    dict_h = self._load_pp_dict('H', 0)
+                    eid = []
+                    comp_index_id = []
+                    comp_id = []
+                    atom_id = []
+                    atom_type = []
+                    cs_list_id = []
+                    val = []
+                    for i in [0,1,len(seq)-2,len(seq)-1]:
+                        if aa_dict[seq[i]] != "PRO":
+                            if i == 0 or i==len(seq)-1:
+                                tp = aa_dict[seq[i]]
+                                for atm in atom_list.keys():
+                                    eid.append(tag)
+                                    comp_index_id.append(i+1)
+                                    comp_id.append(aa_dict[seq[i]])
+                                    atom_id.append(atm)
+                                    atom_type.append(atom_list[atm])
+                                    cs_list_id.append('1')
+                                    if atm == 'N':
+                                        val.append(dict_n[tp])
+                                    elif atm == 'H':
+                                        val.append(dict_h[tp])
+                                    else:
+                                        print ("Something wrong")
                             else:
-                                print("Something wrong")
-            for i in range(3, len(seq) - 3):
-                if aa_dict[seq[i]] != "PRO":
-                    tp7 = '{}-{}-{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 3]],aa_dict[seq[i - 2]], aa_dict[seq[i - 1]], aa_dict[seq[i]],
-                                                 aa_dict[seq[i + 1]], aa_dict[seq[i + 2]],aa_dict[seq[i + 3]])
-                    tp5='{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
-                    tp3 = '{}-{}-{}'.format( aa_dict[seq[i - 1]], aa_dict[seq[i]],
-                                                  aa_dict[seq[i + 1]])
-                    for atm in atom_list.keys():
-                        eid.append(tag)
-                        comp_index_id.append(i + 1)
-                        comp_id.append(aa_dict[seq[i]])
-                        atom_id.append(atm)
-                        atom_type.append(atom_list[atm])
-                        cs_list_id.append('1')
-                        if atm == 'N':
-                            try:
-                                val.append(dict_n7[tp7])
-                            except KeyError:
-                                try:
-                                    val.append(dict_n5[tp5])
-                                except KeyError:
-                                    val.append(dict_n3[tp3])
-                        elif atm == 'H':
-                            try:
-                                val.append(dict_h7[tp7])
-                            except KeyError:
-                                try:
-                                    val.append(dict_h5[tp5])
-                                except KeyError:
-                                    val.append(dict_h3[tp3])
-                        else:
-                            print("Something wrong")
+                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
+                                for atm in atom_list.keys():
+                                    eid.append(tag)
+                                    comp_index_id.append(i + 1)
+                                    comp_id.append(aa_dict[seq[i]])
+                                    atom_id.append(atm)
+                                    atom_type.append(atom_list[atm])
+                                    cs_list_id.append('1')
+                                    if atm == 'N':
+                                        val.append(dict_n3[tp3])
+                                    elif atm == 'H':
+                                        val.append(dict_h3[tp3])
+                                    else:
+                                        print("Something wrong")
+                    for i in range(2, len(seq) - 2):
+                        if aa_dict[seq[i]] != "PRO":
+                            tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
+                            tp3 =  '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
+                            for atm in atom_list.keys():
+                                eid.append(tag)
+                                comp_index_id.append(i + 1)
+                                comp_id.append(aa_dict[seq[i]])
+                                atom_id.append(atm)
+                                atom_type.append(atom_list[atm])
+                                cs_list_id.append('1')
+                                if atm == 'N':
+                                    try:
+                                        val.append(dict_n5[tp5])
+                                    except KeyError:
+                                        val.append(dict_n3[tp3])
+                                elif atm == 'H':
+                                    try:
+                                        val.append(dict_h5[tp5])
+                                    except KeyError:
+                                        val.append(dict_h3[tp3])
+                                else:
+                                    print("Something wrong")
+                else:
+                    dict_n7 = self._load_pp_dict('N', 3)
+                    dict_h7 = self._load_pp_dict('H', 3)
+                    dict_n5 = self._load_pp_dict('N', 2)
+                    dict_h5 = self._load_pp_dict('H', 2)
+                    dict_n3 = self._load_pp_dict('N', 1)
+                    dict_h3 = self._load_pp_dict('H', 1)
+                    dict_n = self._load_pp_dict('N', 0)
+                    dict_h = self._load_pp_dict('H', 0)
+                    eid = []
+                    comp_index_id = []
+                    comp_id = []
+                    atom_id = []
+                    atom_type = []
+                    cs_list_id = []
+                    val = []
+                    for i in [0,1,2,len(seq)-3,len(seq)-2,len(seq)-1]:
+                        if aa_dict[seq[i]] != "PRO":
+                            if i == 0 or i==len(seq)-1:
+                                tp = aa_dict[seq[i]]
+                                for atm in atom_list.keys():
+                                    eid.append(tag)
+                                    comp_index_id.append(i+1)
+                                    comp_id.append(aa_dict[seq[i]])
+                                    atom_id.append(atm)
+                                    atom_type.append(atom_list[atm])
+                                    cs_list_id.append('1')
+                                    if atm == 'N':
+                                        val.append(dict_n[tp])
+                                    elif atm == 'H':
+                                        val.append(dict_h[tp])
+                                    else:
+                                        print ("Something wrong")
+                            elif i==1 or i == len(seq)-2:
+                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
+                                for atm in atom_list.keys():
+                                    eid.append(tag)
+                                    comp_index_id.append(i + 1)
+                                    comp_id.append(aa_dict[seq[i]])
+                                    atom_id.append(atm)
+                                    atom_type.append(atom_list[atm])
+                                    cs_list_id.append('1')
+                                    if atm == 'N':
+                                        val.append(dict_n3[tp3])
+                                    elif atm == 'H':
+                                        val.append(dict_h3[tp3])
+                                    else:
+                                        print("Something wrong")
+                            else:
+                                tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
+                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
+                                for atm in atom_list.keys():
+                                    eid.append(tag)
+                                    comp_index_id.append(i + 1)
+                                    comp_id.append(aa_dict[seq[i]])
+                                    atom_id.append(atm)
+                                    atom_type.append(atom_list[atm])
+                                    cs_list_id.append('1')
+                                    if atm == 'N':
+                                        try:
+                                            val.append(dict_n5[tp5])
+                                        except KeyError:
+                                            val.append(dict_n3[tp3])
+                                    elif atm == 'H':
+                                        try:
+                                            val.append(dict_h5[tp5])
+                                        except KeyError:
+                                            val.append(dict_h3[tp3])
+                                    else:
+                                        print("Something wrong")
+                    for i in range(3, len(seq) - 3):
+                        if aa_dict[seq[i]] != "PRO":
+                            tp7 = '{}-{}-{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 3]],aa_dict[seq[i - 2]], aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                         aa_dict[seq[i + 1]], aa_dict[seq[i + 2]],aa_dict[seq[i + 3]])
+                            tp5='{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
+                            tp3 = '{}-{}-{}'.format( aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                          aa_dict[seq[i + 1]])
+                            for atm in atom_list.keys():
+                                eid.append(tag)
+                                comp_index_id.append(i + 1)
+                                comp_id.append(aa_dict[seq[i]])
+                                atom_id.append(atm)
+                                atom_type.append(atom_list[atm])
+                                cs_list_id.append('1')
+                                if atm == 'N':
+                                    try:
+                                        val.append(dict_n7[tp7])
+                                    except KeyError:
+                                        try:
+                                            val.append(dict_n5[tp5])
+                                        except KeyError:
+                                            val.append(dict_n3[tp3])
+                                elif atm == 'H':
+                                    try:
+                                        val.append(dict_h7[tp7])
+                                    except KeyError:
+                                        try:
+                                            val.append(dict_h5[tp5])
+                                        except KeyError:
+                                            val.append(dict_h3[tp3])
+                                else:
+                                    print("Something wrong")
 
-        out_data = [eid,comp_index_id,comp_id,atom_id,atom_type,cs_list_id,val]
+                out_data = [eid,comp_index_id,comp_id,atom_id,atom_type,cs_list_id,val]
+            else:
+                print("Sequence contains nonstandard amino acid code. Random coil prediction is not possible with non "
+                      "standard amino acids")
+                out_data = []
+        else:
+            out_data = []
         # for i in range(len(out_data[0])):
         #     print (out_data[1][i],out_data[2][i],out_data[3][i],out_data[-1][i])
         return out_data
@@ -416,7 +449,7 @@ class Spectra(object):
 
         return outdata
 
-    def plotn15_hsqc(self, entryids=None, seq = None, nn=3, colorby=None, groupbyres=False):
+    def plotn15_hsqc(self, entryids=None, seq = None, nn=3, colorby=None, groupbyres=False,csdata=None, outfilename = 'n15hsqc.html'):
         """
         Plots hsqc peak positions for a given list of BMRB ids
         :param entryids: entry id or list of entry ids
@@ -435,10 +468,11 @@ class Spectra(object):
         else:
             tag = "Not a valid model"
 
-        outfilename = 'n15hsqc.html'
         title = 'Simulated N15-HSQC peak positions'
 
-        csdata = self.get_entry(entryids,seq,tag,nn)
+        if csdata is None:
+            csdata = self.get_entry(entryids,seq,tag,nn)
+
         if len(csdata):
             hsqcdata = self.n15_hsqc(csdata)
         else:
@@ -749,7 +783,7 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False):
+    def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False,outfilename =None):
         if normalized:
             count = 'Density'
         else:
@@ -760,7 +794,10 @@ class Histogram(object):
             yaxis=dict(title=count))
         data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        out_file = '{}_{}.html'.format(residue, atom)
+        if outfilename is None:
+            out_file = '{}_{}.html'.format(residue, atom)
+        else:
+            out_file = outfilename
         if _NOTEBOOK:
             plotly.offline.iplot(fig)
         else:
@@ -806,17 +843,60 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
+def _called_directly():
+    """ Figure out what to do if we were called on the command line
+        rather than imported as a module."""
 
+    # Specify some basic information about our command
+    optparser = optparse.OptionParser(usage="usage: %prog",
+                                      version=__version__,
+                                      description="NMR-STAR handling python "
+                                                  "module. Usually you'll want "
+                                                  "to import this. When ran "
+                                                  "without arguments a unit "
+                                                  "test is performed.")
+    optparser.add_option("--hsqc", metavar="entryid", action="store",
+                         dest="hsqc", default=None, type="string", nargs=1,
+                         help="Outputs HSQC spectrum for the given BMRB entry.")
+    optparser.add_option("--hist", metavar="Residue atom", action="store",
+                         dest="hist", default=None, type="string", nargs = 2,
+                         help="Outputs Histogram")
+    optparser.add_option("--seq", metavar="One letter sequence", action="store",
+                         dest="seq", default=None, nargs=1, type="string",
+                         help="Random coil HSQC")
+    optparser.add_option("--out", metavar="filename", action="store",
+                         dest="outfile", default=None, nargs=1, type="string",
+                         help="Output filename")
+
+
+
+    # Options, parse 'em
+    (options, cmd_input) = optparser.parse_args()
+
+    if len(cmd_input) > 0:
+        print("No arguments are allowed. Please see the options using --help.")
+        sys.exit(0)
+    # Check for command misuse
+    if sum(1 for x in [options.hsqc,
+                       options.hist, options.seq] if x) > 1:
+        print("You can only use one of the --diff, --validate, and --tag "
+              "options at once.")
+        sys.exit(1)
+    if options.outfile is None:
+        print ("Output file name must be specified with --out")
+        sys.exit(1)
+    if options.hsqc is not None:
+        print (options.hsqc)
+        S = Spectra()
+        S.plotn15_hsqc(entryids=options.hsqc.split(','),outfilename='{}.html'.format(options.outfile))
+    elif options.hist is not None:
+        H=Histogram()
+        H.single_atom(residue=options.hist[0],atom=options.hist[1], outfilename='{}.html'.format(options.outfile))
+    elif options.seq is not None:
+        S=Spectra()
+        S.plotn15_hsqc(seq=options.seq,outfilename='{}.html'.format(options.outfile))
+    else:
+        print ("Nothing specified")
+        sys.exit(0)
 if __name__ == "__main__":
-    s = Spectra()
-    #s.plotn15_hsqc(15410,seq='MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG',
-    #              tag = 'user', nn=7, colorby='entry', groupbyres=True)
-    s.plotn15_hsqc(36082,seq='MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKEATLHLVLRLRGG',nn=7,colorby='entry',groupbyres=True)
-    #s.plotn15_hsqc('234234234234')
-    # p = Histogram()
-    # atlist = ['ASP-HA', 'GLN-HB2']
-    # p.multiple_atom(atlist, normalized=False)
-    # p.single_2dhistogram(sys.argv[1],sys.argv[2],sys.argv[3])
-    # atmlist = ['CB']
-    # cslist = [69.0]
-    # p.conditional_histogram('TYR','CA',atmlist,cslist)
+   _called_directly()
