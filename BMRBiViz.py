@@ -3,7 +3,7 @@ from __future__ import print_function
 import json
 import numpy as np
 import sys
-
+import os
 import plotly
 import pynmrstar
 import optparse
@@ -18,13 +18,12 @@ if PY3:
     from urllib.request import urlopen, Request
 else:
     from urllib2 import urlopen, Request
-    from cStringIO import StringIO
-
-    BytesIO = StringIO
 
 _API_URL = "http://webapi.bmrb.wisc.edu/v2"
 _NOTEBOOK = False
-__version__ = "1.0"
+__version__ = "1.1"
+
+
 # http://webapi.bmrb.wisc.edu/v2/search/chemical_shifts?comp_id=ASP&atom_id=HD2
 
 class Spectra(object):
@@ -33,75 +32,99 @@ class Spectra(object):
     """
 
     def __init__(self):
-        # print("PyNMRSTAR version : {}".format(pynmrstar.__version__))
         if _NOTEBOOK:
             plotly.offline.init_notebook_mode(connected=True)
-        # self.plotn15_hsqc([17074,17076,17077],'entry')
 
-
-    def get_entry(self, entryid=None,seq=None,tag='User',nn=3):
+    def get_entry(self, bmrbid=None, filename=None, seq=None, tag='User', nn=3):
         """
         Downloads the chemical shift data for a given entry id or list of entry ids
-        :param entryid: entry or entry ids a list
+        :param bmrbid: BMRB ID or list of BMRBIDs
+        :param filename: local NMR-STAR filename
+        :param seq: amino acids sequence in single letter code
+        :param tag: tag associated to seq default 'User'
+        :param nn: nearest neighbour effect (3/5/7) default 3
         :return: chemical shift data
         """
-        if seq is not None and nn in [3,5,7]:
-            outdata = self.predict_from_seq(seq,tag,nn)
+        outdata = []
+        if bmrbid is None and filename is None and seq is None:
+            print("BMRB ID or filename or sequence must be given")
         else:
-            print ("Either no sequence or wrong nn value")
-            outdata = []
-        if type(entryid) is list:
-            for eid in entryid:
-                try:
-                    indata = pynmrstar.Entry.from_database(eid)
+            if seq is not None:
+                if nn in [3, 5, 7]:
+                    outdata = self.predict_from_seq(seq, tag, nn)
+                else:
+                    print("Wrong nearest neighbour value nn = 3/5/7")
+                    outdata = []
+            if filename is not None:
+                if os.path.exists(filename):
+                    indata = pynmrstar.Entry.from_file(filename)
+                    fid = os.path.splitext(os.path.basename(filename))[0]
                     cs_data = indata.get_tags(
                         ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
                          '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
                          '_Atom_chem_shift.Val'])
-
-                    eids = [eid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
+                    eids = [fid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
                     eid_cs_data = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
                                    cs_data['_Atom_chem_shift.Comp_ID'],
                                    cs_data['_Atom_chem_shift.Atom_ID'],
                                    cs_data['_Atom_chem_shift.Atom_type'],
                                    cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
                                    cs_data['_Atom_chem_shift.Val']]
-                except (OSError, IOError) as e:
-                    print(e)
-                if len(outdata):
-                    for i in range(len(eid_cs_data)):
-                        outdata[i] = outdata[i] + eid_cs_data[i]
+                    if len(outdata):
+                        for i in range(len(eid_cs_data)):
+                            outdata[i] = outdata[i] + eid_cs_data[i]
+                    else:
+                        outdata = eid_cs_data
+            if bmrbid is not None:
+                if type(bmrbid) is list:
+                    for eid in bmrbid:
+                        try:
+                            indata = pynmrstar.Entry.from_database(eid)
+                            cs_data = indata.get_tags(
+                                ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID',
+                                 '_Atom_chem_shift.Atom_ID',
+                                 '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
+                                 '_Atom_chem_shift.Val'])
+
+                            eids = [eid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
+                            eid_cs_data = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
+                                           cs_data['_Atom_chem_shift.Comp_ID'],
+                                           cs_data['_Atom_chem_shift.Atom_ID'],
+                                           cs_data['_Atom_chem_shift.Atom_type'],
+                                           cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
+                                           cs_data['_Atom_chem_shift.Val']]
+                        except (OSError, IOError) as e:
+                            print(e)
+                        if len(outdata):
+                            for i in range(len(eid_cs_data)):
+                                outdata[i] = outdata[i] + eid_cs_data[i]
+                        else:
+                            outdata = eid_cs_data
                 else:
-                    outdata = eid_cs_data
-        elif entryid is None and seq is not None:
-            print ('Only prediction no Comparison')
-        elif entryid is None and seq is None:
-            print('Entry ID or Sequence must be specified')
-        else:
-            try:
-                indata = pynmrstar.Entry.from_database(entryid)
-                cs_data = indata.get_tags(
-                    ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
-                     '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
-                     '_Atom_chem_shift.Val'])
-                eids = [entryid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
-                eid_cs_data = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
-                           cs_data['_Atom_chem_shift.Comp_ID'],
-                           cs_data['_Atom_chem_shift.Atom_ID'],
-                           cs_data['_Atom_chem_shift.Atom_type'],
-                           cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
-                           cs_data['_Atom_chem_shift.Val']]
-                if len(outdata):
-                    for i in range(len(eid_cs_data)):
-                        outdata[i] = outdata[i] + eid_cs_data[i]
-                else:
-                    outdata = eid_cs_data
-            except (OSError, IOError) as e:
-                print(e)
+                    try:
+                        indata = pynmrstar.Entry.from_database(bmrbid)
+                        cs_data = indata.get_tags(
+                            ['_Atom_chem_shift.Comp_index_ID', '_Atom_chem_shift.Comp_ID', '_Atom_chem_shift.Atom_ID',
+                             '_Atom_chem_shift.Atom_type', '_Atom_chem_shift.Assigned_chem_shift_list_ID',
+                             '_Atom_chem_shift.Val'])
+                        eids = [bmrbid for i in range(len(cs_data['_Atom_chem_shift.Comp_index_ID']))]
+                        eid_cs_data = [eids, cs_data['_Atom_chem_shift.Comp_index_ID'],
+                                       cs_data['_Atom_chem_shift.Comp_ID'],
+                                       cs_data['_Atom_chem_shift.Atom_ID'],
+                                       cs_data['_Atom_chem_shift.Atom_type'],
+                                       cs_data['_Atom_chem_shift.Assigned_chem_shift_list_ID'],
+                                       cs_data['_Atom_chem_shift.Val']]
+                        if len(outdata):
+                            for i in range(len(eid_cs_data)):
+                                outdata[i] = outdata[i] + eid_cs_data[i]
+                        else:
+                            outdata = eid_cs_data
+                    except (OSError, IOError) as e:
+                        print(e)
         return outdata
 
     @staticmethod
-    def _load_pp_dict(atom, nn, filtered = True):
+    def _load_pp_dict(atom, nn, filtered=True):
         """
         Internal method to load nearest neighbor statistis from lib folder
         :param atom: atom name
@@ -109,8 +132,8 @@ class Spectra(object):
         :param filtered: exclude the outliers
         :return: python dictionary object
         """
-        fname = 'rcdata/nn_pp_{}_{}_filtered.txt'.format(atom,nn)
-        with open(fname,'r') as f:
+        fname = 'rcdata/nn_pp_{}_{}_filtered.txt'.format(atom, nn)
+        with open(fname, 'r') as f:
             dat = f.read().split("\n")[:-1]
         if filtered:
             ix = 4
@@ -122,9 +145,7 @@ class Spectra(object):
             pp_dic[d[0]] = float(d[ix])
         return pp_dic
 
-
-
-    def predict_from_seq(self,seq = None,tag='User',nn=3):
+    def predict_from_seq(self, seq=None, tag='User', nn=3):
         """
         Predicts pseudo random coil chemical shifts for a given sequence with standard amino acids
         :param seq: single letter sequence as a string
@@ -132,17 +153,17 @@ class Spectra(object):
         :param nn: Nearest neighbor effect (3 for Tri-peptide, 5 for Penta and 7 for hepta)
         :return: chemical shift values as a python list
         """
-        if seq is not None and nn in [3,5,7]:
-            atom_list = {'N':'N','H':'H'}
+        if seq is not None and nn in [3, 5, 7]:
+            atom_list = {'N': 'N', 'H': 'H'}
             nearest_nei = nn
-            aa_dict = {'I':'ILE', 'Q':'GLN', 'G':'GLY', 'E':'GLU', 'C':'CYS',
-                       'D':'ASP', 'S':'SER', 'K':'LYS', 'P':'PRO', 'N':'ASN',
-                       'V':'VAL', 'T':'THR', 'H':'HIS', 'W':'TRP', 'F':'PHE',
-                       'A':'ALA', 'M':'MET', 'L':'LEU', 'R':'ARG', 'Y':'TYR'}
+            aa_dict = {'I': 'ILE', 'Q': 'GLN', 'G': 'GLY', 'E': 'GLU', 'C': 'CYS',
+                       'D': 'ASP', 'S': 'SER', 'K': 'LYS', 'P': 'PRO', 'N': 'ASN',
+                       'V': 'VAL', 'T': 'THR', 'H': 'HIS', 'W': 'TRP', 'F': 'PHE',
+                       'A': 'ALA', 'M': 'MET', 'L': 'LEU', 'R': 'ARG', 'Y': 'TYR'}
             standards_only = True
             for i in seq:
                 if i not in aa_dict.keys():
-                    standards_only=False
+                    standards_only = False
             if standards_only:
                 if nearest_nei == 3:
                     dict_n3 = self._load_pp_dict('N', 1)
@@ -156,12 +177,12 @@ class Spectra(object):
                     atom_type = []
                     cs_list_id = []
                     val = []
-                    for i in [0,len(seq)-1]:
+                    for i in [0, len(seq) - 1]:
                         if aa_dict[seq[i]] != "PRO":
                             tp = aa_dict[seq[i]]
                             for atm in atom_list.keys():
                                 eid.append(tag)
-                                comp_index_id.append(i+1)
+                                comp_index_id.append(i + 1)
                                 comp_id.append(aa_dict[seq[i]])
                                 atom_id.append(atm)
                                 atom_type.append(atom_list[atm])
@@ -171,13 +192,13 @@ class Spectra(object):
                                 elif atm == 'H':
                                     val.append(dict_h[tp])
                                 else:
-                                    print ("Something wrong")
-                    for i in range(1,len(seq)-1):
+                                    print("Something wrong")
+                    for i in range(1, len(seq) - 1):
                         if aa_dict[seq[i]] != "PRO":
-                            tp3= '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
+                            tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
                             for atm in atom_list.keys():
                                 eid.append(tag)
-                                comp_index_id.append(i+1)
+                                comp_index_id.append(i + 1)
                                 comp_id.append(aa_dict[seq[i]])
                                 atom_id.append(atm)
                                 atom_type.append(atom_list[atm])
@@ -187,7 +208,7 @@ class Spectra(object):
                                 elif atm == 'H':
                                     val.append(dict_h3[tp3])
                                 else:
-                                    print ("Something wrong")
+                                    print("Something wrong")
                 elif nearest_nei == 5:
                     dict_n5 = self._load_pp_dict('N', 2)
                     dict_h5 = self._load_pp_dict('H', 2)
@@ -202,13 +223,13 @@ class Spectra(object):
                     atom_type = []
                     cs_list_id = []
                     val = []
-                    for i in [0,1,len(seq)-2,len(seq)-1]:
+                    for i in [0, 1, len(seq) - 2, len(seq) - 1]:
                         if aa_dict[seq[i]] != "PRO":
-                            if i == 0 or i==len(seq)-1:
+                            if i == 0 or i == len(seq) - 1:
                                 tp = aa_dict[seq[i]]
                                 for atm in atom_list.keys():
                                     eid.append(tag)
-                                    comp_index_id.append(i+1)
+                                    comp_index_id.append(i + 1)
                                     comp_id.append(aa_dict[seq[i]])
                                     atom_id.append(atm)
                                     atom_type.append(atom_list[atm])
@@ -218,9 +239,9 @@ class Spectra(object):
                                     elif atm == 'H':
                                         val.append(dict_h[tp])
                                     else:
-                                        print ("Something wrong")
+                                        print("Something wrong")
                             else:
-                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
+                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
                                 for atm in atom_list.keys():
                                     eid.append(tag)
                                     comp_index_id.append(i + 1)
@@ -236,8 +257,9 @@ class Spectra(object):
                                         print("Something wrong")
                     for i in range(2, len(seq) - 2):
                         if aa_dict[seq[i]] != "PRO":
-                            tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
-                            tp3 =  '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
+                            tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]], aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                          aa_dict[seq[i + 1]], aa_dict[seq[i + 2]])
+                            tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
                             for atm in atom_list.keys():
                                 eid.append(tag)
                                 comp_index_id.append(i + 1)
@@ -273,13 +295,13 @@ class Spectra(object):
                     atom_type = []
                     cs_list_id = []
                     val = []
-                    for i in [0,1,2,len(seq)-3,len(seq)-2,len(seq)-1]:
+                    for i in [0, 1, 2, len(seq) - 3, len(seq) - 2, len(seq) - 1]:
                         if aa_dict[seq[i]] != "PRO":
-                            if i == 0 or i==len(seq)-1:
+                            if i == 0 or i == len(seq) - 1:
                                 tp = aa_dict[seq[i]]
                                 for atm in atom_list.keys():
                                     eid.append(tag)
-                                    comp_index_id.append(i+1)
+                                    comp_index_id.append(i + 1)
                                     comp_id.append(aa_dict[seq[i]])
                                     atom_id.append(atm)
                                     atom_type.append(atom_list[atm])
@@ -289,9 +311,9 @@ class Spectra(object):
                                     elif atm == 'H':
                                         val.append(dict_h[tp])
                                     else:
-                                        print ("Something wrong")
-                            elif i==1 or i == len(seq)-2:
-                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i-1]],aa_dict[seq[i]],aa_dict[seq[i+1]])
+                                        print("Something wrong")
+                            elif i == 1 or i == len(seq) - 2:
+                                tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
                                 for atm in atom_list.keys():
                                     eid.append(tag)
                                     comp_index_id.append(i + 1)
@@ -306,7 +328,8 @@ class Spectra(object):
                                     else:
                                         print("Something wrong")
                             else:
-                                tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
+                                tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]], aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                              aa_dict[seq[i + 1]], aa_dict[seq[i + 2]])
                                 tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]])
                                 for atm in atom_list.keys():
                                     eid.append(tag)
@@ -329,11 +352,14 @@ class Spectra(object):
                                         print("Something wrong")
                     for i in range(3, len(seq) - 3):
                         if aa_dict[seq[i]] != "PRO":
-                            tp7 = '{}-{}-{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 3]],aa_dict[seq[i - 2]], aa_dict[seq[i - 1]], aa_dict[seq[i]],
-                                                         aa_dict[seq[i + 1]], aa_dict[seq[i + 2]],aa_dict[seq[i + 3]])
-                            tp5='{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]],aa_dict[seq[i - 1]], aa_dict[seq[i]], aa_dict[seq[i + 1]],aa_dict[seq[i + 2]])
-                            tp3 = '{}-{}-{}'.format( aa_dict[seq[i - 1]], aa_dict[seq[i]],
-                                                          aa_dict[seq[i + 1]])
+                            tp7 = '{}-{}-{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 3]], aa_dict[seq[i - 2]],
+                                                                aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                                aa_dict[seq[i + 1]], aa_dict[seq[i + 2]],
+                                                                aa_dict[seq[i + 3]])
+                            tp5 = '{}-{}-{}-{}-{}'.format(aa_dict[seq[i - 2]], aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                          aa_dict[seq[i + 1]], aa_dict[seq[i + 2]])
+                            tp3 = '{}-{}-{}'.format(aa_dict[seq[i - 1]], aa_dict[seq[i]],
+                                                    aa_dict[seq[i + 1]])
                             for atm in atom_list.keys():
                                 eid.append(tag)
                                 comp_index_id.append(i + 1)
@@ -360,7 +386,7 @@ class Spectra(object):
                                 else:
                                     print("Something wrong")
 
-                out_data = [eid,comp_index_id,comp_id,atom_id,atom_type,cs_list_id,val]
+                out_data = [eid, comp_index_id, comp_id, atom_id, atom_type, cs_list_id, val]
             else:
                 print("Sequence contains nonstandard amino acid code. Random coil prediction is not possible with non "
                       "standard amino acids")
@@ -371,9 +397,8 @@ class Spectra(object):
         #     print (out_data[1][i],out_data[2][i],out_data[3][i],out_data[-1][i])
         return out_data
 
-
     @staticmethod
-    def n15_hsqc(csdata):
+    def convert_to_n15hsqc_peaks(csdata):
         """
         Converts the output from get_entry into hsqc peak positions
         :param csdata: output from get_entry
@@ -450,14 +475,17 @@ class Spectra(object):
 
         return outdata
 
-    def plotn15_hsqc(self, entryids=None, seq = None, nn=3, colorby=None, groupbyres=False,csdata=None, outfilename = 'n15hsqc.html'):
+    def n15hsqc(self, bmrbid=None, filename=None, seq=None, nn=3, colorby=None, groupbyres=False,
+                outfilename='n15hsqc.html'):
         """
         Plots hsqc peak positions for a given list of BMRB ids
-        :param entryids: entry id or list of entry ids
+        :param bmrbid: entry id or list of entry ids
         :param seq: sequence in one letter code
+        :param filename: local NMR-STAR filename
         :param nn: 3/5/7 for Tri or Penta or Hepta peptide model prediction
         :param colorby: Color by res/entry (default res for single entry/ entry for multiple entries)
         :param groupbyres: if TRUE connects the same seq ids by line; default False
+        :param outfilename: Output filename
         :return: plotly plot object or html file
         """
         if nn == 3:
@@ -471,18 +499,20 @@ class Spectra(object):
 
         title = 'Simulated N15-HSQC peak positions'
 
-        if csdata is None:
-            csdata = self.get_entry(entryids,seq,tag,nn)
+        csdata = self.get_entry(bmrbid, filename, seq, tag, nn)
 
         if len(csdata):
-            hsqcdata = self.n15_hsqc(csdata)
+            hsqcdata = self.convert_to_n15hsqc_peaks(csdata)
         else:
             hsqcdata = []
+
         if colorby == 'entry':
             idx = 0
         elif colorby == 'res':
             idx = 2
-        elif type(entryids) is list:
+        elif type(bmrbid) is list and len(bmrbid) > 1:
+            idx = 0
+        elif sum(1 for i in [bmrbid, filename, seq] if i is not None) > 1:
             idx = 0
         else:
             idx = 2
@@ -568,22 +598,61 @@ class Histogram(object):
         :param normalized: True/False Plots either Count/Density default: False
         :return: Plotly object
         """
-        url = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom))
+        standard = ['ILE', 'GLN', 'GLY', 'GLU', 'CYS',
+                    'ASP', 'SER', 'LYS', 'PRO', 'ASN',
+                    'VAL', 'THR', 'HIS', 'TRP', 'PHE',
+                    'ALA', 'MET', 'LEU', 'ARG', 'TYR',
+                    'A', 'C', 'G', 'U', 'DA', 'DC', 'DG', 'DT']
+
+        if residue == "*" and atom == "*":
+            print("ERROR: Getting full database will overload the memory! please chose a residue or atom")
+            sys.exit(1)
+        elif residue == "*":
+            url = Request(_API_URL + "/search/chemical_shifts?atom_id={}".format(atom))
+        elif atom == "*":
+            url = Request(_API_URL + "/search/chemical_shifts?comp_id={}".format(residue))
+        else:
+            url = Request(_API_URL + "/search/chemical_shifts?comp_id={}&atom_id={}".format(residue, atom))
         url.add_header('Application', 'BMRBiViz')
         r = urlopen(url)
-        d = json.loads(r.read())
-        x = [i[d['columns'].index('Atom_chem_shift.Val')] for i in d['data']]
-        if filtered:
-            mean = np.mean(x)
-            sd = np.std(x)
-            lb = mean - (sd_limit * sd)
-            ub = mean + (sd_limit * sd)
-            x = [i for i in x if lb < i < ub]
-        if normalized:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom),
-                                               histnorm='probability', opacity=0.75)
+        dump = json.loads(r.read())
+        d = [i for i in dump['data'] if i[dump['columns'].index('Atom_chem_shift.Comp_ID')] in standard]
+
+        alist = set(['{}-{}'.format(i[dump['columns'].index('Atom_chem_shift.Comp_ID')],
+                                    i[dump['columns'].index('Atom_chem_shift.Atom_ID')]) for i in d])
+        if len(alist) > 1:
+            data = []
+            for atm in alist:
+                res = atm.split("-")[0]
+                at = atm.split("-")[1]
+                x = [i[dump['columns'].index('Atom_chem_shift.Val')] for i in d
+                     if i[dump['columns'].index('Atom_chem_shift.Comp_ID')] == res and
+                     i[dump['columns'].index('Atom_chem_shift.Atom_ID')] == at]
+                if filtered:
+                    mean = np.mean(x)
+                    sd = np.std(x)
+                    lb = mean - (sd_limit * sd)
+                    ub = mean + (sd_limit * sd)
+                    x = [i for i in x if lb < i < ub]
+                if normalized:
+                    data.append(plotly.graph_objs.Histogram(x=x, name=atm,
+                                                            histnorm='probability', opacity=0.75))
+                else:
+                    data.append(plotly.graph_objs.Histogram(x=x, name=atm, opacity=0.75))
+
         else:
-            data = plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), opacity=0.75)
+            x = [i[dump['columns'].index('Atom_chem_shift.Val')] for i in d]
+            if filtered:
+                mean = np.mean(x)
+                sd = np.std(x)
+                lb = mean - (sd_limit * sd)
+                ub = mean + (sd_limit * sd)
+                x = [i for i in x if lb < i < ub]
+            if normalized:
+                data = [plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom),
+                                                    histnorm='probability', opacity=0.75)]
+            else:
+                data = [plotly.graph_objs.Histogram(x=x, name="{}-{}".format(residue, atom), opacity=0.75)]
         return data
 
     @staticmethod
@@ -748,12 +817,61 @@ class Histogram(object):
                     ]
         return data
 
-    def single_2dhistogram(self, residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False, outfilename = None):
+    def hist(self, residue=None, atom=None, atom_list=None, filtered=True, sd_limit=10, normalized=False,
+             outfilename=None):
+        if normalized:
+            count = 'Density'
+        else:
+            count = 'Count'
+        if residue is None and atom is None and atom_list is None:
+            print('Atleast one of the three parameters should be given residue or atom or atomlist')
+        elif (residue is not None and atom is not None and atom_list is not None) or \
+                (residue is None and atom is not None and atom_list is not None) or \
+                (residue is not None and atom is None and atom_list is not None):
+
+            if residue is None:
+                residue = "*"
+            if atom is None:
+                atom = "*"
+            d1 = self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)
+            d2 = []
+            for atm in atom_list:
+                r = atm.split("-")[0]
+                a = atm.split("-")[1]
+                for d in self.get_histogram_api(r, a, filtered, sd_limit, normalized):
+                    d2.append(d)
+            data = d1 + d2
+            layout = plotly.graph_objs.Layout(
+                barmode='overlay',
+                xaxis=dict(title='Chemical Shift [ppm]'),
+                yaxis=dict(title=count))
+            fig = plotly.graph_objs.Figure(data=data, layout=layout)
+            if outfilename is None:
+                out_file = 'Multiple_atom_histogram.html'
+            else:
+                out_file = outfilename
+            if _NOTEBOOK:
+                plotly.offline.iplot(fig)
+            else:
+                plotly.offline.plot(fig, filename=out_file)
+        elif residue is None and atom is None and atom_list is not None:
+            self.multiple_atom(atom_list, filtered, sd_limit, normalized, outfilename)
+        elif residue is not None and atom is not None and atom_list is None:
+            self.single_atom(residue, atom, filtered, sd_limit, normalized, outfilename)
+        elif residue is not None and atom is None and atom_list is None:
+            self.single_atom(residue, '*', filtered, sd_limit, normalized, outfilename)
+        elif residue is None and atom is not None and atom_list is None:
+            self.single_atom('*', atom, filtered, sd_limit, normalized, outfilename)
+        else:
+            print("Not a valid option")
+
+    def hist2d(self, residue, atom1, atom2, filtered=True, sd_limit=10, normalized=False, outfilename=None):
         """
         Generates chemical shift correlation plots for a given two atoms in a given amino acid
         :param residue: 3 letter amino acid code
         :param atom1: IUPAC atom name
-        :param atom2: True/False Filters based on standard deviation cutoff Default:True
+        :param atom2: IUPAC atom name
+        :param filtered:True/False Filters based on standard deviation cutoff Default:True
         :param sd_limit: Number of time Standard deviation for filtering default: 10
         :param normalized: True/False Plots either Count/Density default: False
         :param outfilename: output file name
@@ -800,7 +918,7 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False,outfilename =None):
+    def single_atom(self, residue, atom, filtered=True, sd_limit=10, normalized=False, outfilename=None):
         """
         Generates histgram for a given atom in a given amino acid
         :param residue: 3 letter amino acid code
@@ -819,7 +937,7 @@ class Histogram(object):
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title=count))
-        data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)]
+        data = self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
         if outfilename is None:
             out_file = '{}_{}.html'.format(residue, atom)
@@ -830,7 +948,7 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def multiple_atom(self, atom_list, filtered=True, sd_limit=10, normalized=False,outfilename =None):
+    def multiple_atom(self, atom_list, filtered=True, sd_limit=10, normalized=False, outfilename=None):
         """
         Generates histogram for a given list of atoms from various amino acids
         :param atom_list: atom list example ['ALA:CA','GLY:CA','ALA:HA']
@@ -848,7 +966,8 @@ class Histogram(object):
         for atm in atom_list:
             residue = atm.split("-")[0]
             atom = atm.split("-")[1]
-            data.append(self.get_histogram_api(residue, atom, filtered, sd_limit, normalized))
+            for dd in self.get_histogram_api(residue, atom, filtered, sd_limit, normalized):
+                data.append(dd)
         layout = plotly.graph_objs.Layout(
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
@@ -863,7 +982,8 @@ class Histogram(object):
         else:
             plotly.offline.plot(fig, filename=out_file)
 
-    def conditional_histogram(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False,outfilename =None):
+    def conditional_hist(self, residue, atom, atomlist, cslist, filtered=True, sd_limit=10, normalized=False,
+                         outfilename=None):
         """
         Generates chemical shift histogram, which depends on the chemical shift values of given list of atoms
         in the same amino acid
@@ -885,7 +1005,7 @@ class Histogram(object):
             barmode='overlay',
             xaxis=dict(title='Chemical Shift [ppm]'),
             yaxis=dict(title=count))
-        data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized),
+        data = [self.get_histogram_api(residue, atom, filtered, sd_limit, normalized)[0],
                 self.get_conditional_histogram_api(residue, atom, atomlist, cslist, filtered, sd_limit, normalized)
                 ]
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
@@ -897,6 +1017,7 @@ class Histogram(object):
             plotly.offline.iplot(fig)
         else:
             plotly.offline.plot(fig, filename=out_file)
+
 
 def _called_directly():
     """ Figure out what to do if we were called on the command line
@@ -914,7 +1035,7 @@ def _called_directly():
                          dest="hsqc", default=None, type="string", nargs=1,
                          help="Outputs HSQC spectrum for the given BMRB entry.")
     optparser.add_option("--hist", metavar="Residue atom", action="store",
-                         dest="hist", default=None, type="string", nargs = 2,
+                         dest="hist", default=None, type="string", nargs=2,
                          help="Outputs Histogram")
     optparser.add_option("--seq", metavar="One letter sequence", action="store",
                          dest="seq", default=None, nargs=1, type="string",
@@ -922,8 +1043,6 @@ def _called_directly():
     optparser.add_option("--out", metavar="filename", action="store",
                          dest="outfile", default=None, nargs=1, type="string",
                          help="Output filename")
-
-
 
     # Options, parse 'em
     (options, cmd_input) = optparser.parse_args()
@@ -938,20 +1057,22 @@ def _called_directly():
               "options  along with --out")
         sys.exit(1)
     if options.outfile is None:
-        print ("Output file name must be specified with --out")
+        print("Output file name must be specified with --out")
         sys.exit(1)
     if options.hsqc is not None:
-        print (options.hsqc)
-        S = Spectra()
-        S.plotn15_hsqc(entryids=options.hsqc.split(','),outfilename='{}.html'.format(options.outfile))
+        print(options.hsqc)
+        s = Spectra()
+        s.n15hsqc(bmrbid=options.hsqc.split(','), outfilename='{}.html'.format(options.outfile))
     elif options.hist is not None:
-        H=Histogram()
-        H.single_atom(residue=options.hist[0],atom=options.hist[1], outfilename='{}.html'.format(options.outfile))
+        h = Histogram()
+        h.single_atom(residue=options.hist[0], atom=options.hist[1], outfilename='{}.html'.format(options.outfile))
     elif options.seq is not None:
-        S=Spectra()
-        S.plotn15_hsqc(seq=options.seq,outfilename='{}.html'.format(options.outfile))
+        s = Spectra()
+        s.n15hsqc(seq=options.seq, outfilename='{}.html'.format(options.outfile))
     else:
-        print ("Nothing specified")
+        print("Nothing specified")
         sys.exit(0)
+
+
 if __name__ == "__main__":
-   _called_directly()
+    _called_directly()

@@ -35,10 +35,10 @@ class TestSpectra(TestCase):
         self.assertGreater(len(self.Spectra.get_entry('15060')), 0)
         self.assertGreater(len(self.Spectra.get_entry(seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE')),
                            0)
-        self.assertGreater(len(self.Spectra.get_entry(entryid='15060',
+        self.assertGreater(len(self.Spectra.get_entry(bmrbid='15060',
                                                       seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE')),
                            0)
-        self.assertGreater(len(self.Spectra.get_entry(entryid='15060',
+        self.assertGreater(len(self.Spectra.get_entry(bmrbid='15060',
                                                       seq='MTFKLIINGKTLKGETTTEAVDAATAEKVFKQYFNDNGIDGEWTYDDATKTFTITE',
                                                       nn=10)),
                            0)
